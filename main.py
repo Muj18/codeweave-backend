@@ -188,6 +188,7 @@ async def generate_code(req: PromptRequest):
                 yield FOOTER
             
             if is_unresolved(full_response):
+                print("Unresolved issue detected, logging and emailing...")
                 issue_data = {
                     "prompt": req.prompt,
                     "context": req.context,
@@ -196,7 +197,9 @@ async def generate_code(req: PromptRequest):
                     "response": full_response
                 }
                 log_unresolved_issue(issue_data)
+                print("Logging unresolved issue to file...")
                 email_issue(issue_data)
+                print("Emailing unresolved issue to support...")
                 
         except Exception as e:
             yield f"\n\n[Error]: {str(e)}"
