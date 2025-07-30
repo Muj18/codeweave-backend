@@ -11,52 +11,49 @@ Context: {{ context }}
 ---
 
 1. ✅ Summary of Recommended GenAI Architecture
-Summarize the solution based on the user's request. Explain your reasoning and include:
-- Deployment approach (cloud, hybrid, local)
-- Key components (model type, retrieval layer, frontend, orchestration)
-- Whether it's using hosted APIs (e.g. OpenAI, Claude, Bedrock) or open-source models
+Explain your approach, deployment target (cloud/local), and components like:
+- LLM type (API vs open-source)
+- Retrieval pipeline or fine-tuning
+- Frontend (chat UI, streamlit)
+- Backend (FastAPI, Flask, etc.)
 
 ---
 
 2. 🧱 High-Level Architecture Diagram
-Use simple markdown or ASCII to show how the pieces fit together.
+Use ASCII to show data/app/LLM flow:
 
-User → Frontend (Chat UI / App) → Backend API → LLM or RAG Pipeline → Vector DB / Data Source
+User → Frontend → Backend → RAG / LLM → Vector DB / Data → Output
 
-Include additional services if relevant (e.g., Redis, S3, Hugging Face, monitoring, CI/CD).
+Add other pieces: Redis, S3, Bedrock, CI/CD, analytics, etc.
 
 ---
 
 3. 🛠️ Recommended Stack & Tools
-
-- LLMs: OpenAI (GPT-4), Claude, Mistral, LLaMA, Bedrock, Azure OpenAI
-- RAG Pipelines: LangChain, LlamaIndex, Haystack
-- Vector Databases: FAISS, Pinecone, Qdrant, Weaviate
-- Orchestration: FastAPI, Streamlit, Flask, Next.js
-- Infra: Docker, Kubernetes, Terraform, serverless (Lambda, Azure Functions, Cloud Run)
-- Storage: S3, GCS, Azure Blob
-- CI/CD: GitHub Actions, GitLab, Jenkins
+List key tools:
+- LLMs: GPT-4, Claude, Mistral, LLaMA, Bedrock
+- RAG: LangChain, LlamaIndex, Haystack
+- Vector DB: FAISS, Pinecone, Qdrant, Weaviate
+- Orchestration: FastAPI, Streamlit, Next.js
+- Infra: Docker, Kubernetes, Terraform
+- CI/CD: GitHub Actions, Docker Hub, Hugging Face Spaces
 
 ---
 
-4. ⚙️ RAG vs Fine-Tuning vs API Usage
+4. ⚙️ RAG vs Fine-Tuning vs APIs
+Give trade-offs:
+- RAG for searchable private knowledge
+- Fine-tune for tone or intent-specific answers
+- APIs for fast prototyping
 
-Make a recommendation:
-- Use RAG when users want to pull answers from custom/private documents.
-- Use Fine-tuning when users need domain-specific style/voice or classification.
-- Use APIs for rapid prototyping, less infra, and general-purpose answers.
+Mention cost, latency, and maintenance implications.
 
-Mention trade-offs like privacy, latency, cost, and maintenance.
 ---
 
-5. 🔐 Security, Scaling, Cost Considerations
-
-- Secure APIs with tokens, gateways, IAM
-- Rate limit prompts and responses
-- Stream output tokens to reduce memory usage
-- Store models/config in cloud buckets (S3, GCS)
-- Scale with serverless or container-based backends
-- Use caching layers like Redis for conversation memory
+5. 🔐 Security, Scaling, Cost
+- Secure endpoints, token gating, rate limiting
+- Cache embeddings or conversations (Redis)
+- Stream responses to reduce latency
+- Host models on GPU-backed cloud (Lambda, ECS, SageMaker)
 
 ---
 
@@ -92,29 +89,33 @@ Merge them into one code block under a single `### filename.ext` section.
 ---
 
 7. 🚀 CI/CD & Deployment
+- Auto-deploy from GitHub on push
+- Scan containers
+- Deploy to Lambda, ECS, GKE, etc.
+- HF Spaces or Replicate for demos
 
-- Automate with GitHub Actions or GitLab CI
-- Scan containers, auto-deploy on merge
-- Suggest deploy targets like AWS Lambda, ECS, GKE, Azure App Service, or Cloud Run
-- Mention Replicate, HF Spaces, or Docker Hub for open-source apps
+
+
+---
+
+
+
+8. 📊 Monitoring & Observability
+- Prometheus, Grafana, CloudWatch
+- Log prompts, token count, latency
+- Alert on LLM error rates
+
+
 
 ---
 
-8. 📊 Monitoring & Logging
 
-- Use Prometheus/Grafana, CloudWatch, Azure Monitor
-- Log prompts, outputs, latency, and errors
-- Track token usage and request patterns
-
----
 
 9. 💡 Optional Add-ons
-
-- Redis for memory/stateful agents
-- WebSockets or SSE for real-time chat
-- LangChain agents, CrewAI, AutoGen for multi-step tool use
-- Frontends with Tailwind, React, or chatbot UIs
-- Multi-modal support (text+image) using Gemini or Claude 3
+- SSE / WebSockets for live chat
+- CrewAI, LangGraph, Agent workflows
+- Multi-modal (image + text) using Claude 3 / Gemini
+- Tailwind + chatbot UI
 
 ---
 
@@ -122,8 +123,7 @@ Merge them into one code block under a single `### filename.ext` section.
 
 Close with:
 
-If you'd like help deploying this architecture — from infra setup to secure hosting — contact us at support@codeweave.co.
-We offer architecture design, CI/CD pipelines, and GenAI deployment support for teams and enterprises.
+Need help deploying GenAI apps securely and at scale? Reach out at support@codeweave.co — we offer hands-on delivery, vector DB setup, GPU infra, and fine-tuning pipelines.
 
 ---
 

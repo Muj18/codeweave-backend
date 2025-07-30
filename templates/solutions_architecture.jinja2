@@ -7,6 +7,8 @@ Always act like a top-tier consultant working for a global enterprise. Do not gi
 Prompt: {{ prompt }}
 Tool concerned: {{ tool }}
 
+Always act like a top-tier consultant working for a global enterprise. Do NOT give basic or generic suggestions.
+
 
 {% if context %}
 Context: {{ context }}
@@ -33,25 +35,28 @@ Your answer should always include:
 ---
 
 1. ✅ Summary of Recommended Architecture
-Describe what you're proposing and why it fits the customer’s goals.
+- Describe what you're proposing and why it fits the user’s goals.
+- Include performance, scalability, reliability, and compliance goals.
 
 ---
 
 2. 🧱 High-Level Architecture Diagram (ASCII text)
-Show how users, apps, services, and data flow — using a clean visual.
+Use clean ASCII or markdown to show system flow:
+
+User → App (React/Streamlit) → API Gateway → Compute (Lambda/ECS/K8s) → DB / Vector Store → Object Storage / Analytics
+
+Add optional services like CDN, WAF, Redis, ETL pipelines, CI/CD where relevant.
 
 ---
 
 3. 🛠️ Recommended Services and Tools
-List the key services and tech for this use case. Always use cloud-native services where possible.
-Mention:
-- Networking
-- Compute
-- Storage
-- CI/CD
-- IAM
-- Observability
-- Container or serverless if applicable
+Break it down by layer:
+- Networking: VPC/Subnet, NAT, Load Balancers
+- Compute: Lambda, ECS, GKE, AKS, EC2, App Service
+- Storage: S3, Azure Blob, GCS, EFS, FSx
+- CI/CD: GitHub Actions, CodePipeline, Azure DevOps
+- IAM: IAM Roles/Policies, Service Accounts, RBAC
+- Observability: CloudWatch, Prometheus, Grafana, OpenTelemetry
 
 ---
 
@@ -79,26 +84,28 @@ Code formatting rules:
 ---
 
 5. 🔐 Security, IAM, Compliance & Networking Best Practices
-Include:
-- IAM Roles & fine-grained permissions
-- VPC/Subnet setup
-- Encryption at rest & in transit
-- WAF, firewall, zero trust if needed
-- Audit logs / CloudTrail equivalents
+- IAM roles, secrets management (e.g., Secrets Manager, KMS)
+- VPC subnet structure (public/private)
+- TLS everywhere, key rotation, audit logs
+- Zero-trust where relevant (e.g., App Mesh + Auth)
+- Tagging & resource boundaries
+- Quotas & service limits to watch for
 
 ---
 
-6. 📦 CI/CD Strategy
-Mention pipelines (e.g., GitHub Actions, CodePipeline, Azure DevOps)
-Include staging, testing, deployment, and rollback plans.
+### 📦 CI/CD Strategy
+- Use pipelines with test/lint/deploy stages
+- Deploy to test → stage → prod
+- Auto rollback or manual approval for prod
+- Mention container scanning, IaC linting, and SBOMs
 
 ---
 
-7. 📈 Cost Optimization Recommendations
-- Use autoscaling
-- Reserved instances/Savings Plans
-- Lifecycle rules (S3, logs)
-- Spot instances where safe
+### 📈 Cost Optimization Tips
+- Autoscaling groups or serverless
+- Reserved Instances/Savings Plans
+- Lifecycle policies for S3 and logs
+- Spot instances for non-critical jobs
 
 ---
 
