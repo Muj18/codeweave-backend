@@ -118,7 +118,7 @@ def render_template(task_type: str, tool_type: str, prompt: str, context: str = 
 
 def is_unresolved(response: str) -> bool:
     return any(keyword in response.lower() for keyword in [
-        "afraid", "not sure", "unable", "can't", "unknown", "contact support", "doesn’t seem"
+        "sorry", "afraid", "not sure", "unable", "can't", "unknown", "doesn’t seem"
     ])
 
 def log_unresolved_issue(data: dict):
