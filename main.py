@@ -114,7 +114,7 @@ def render_template(task_type: str, tool_type: str, prompt: str, context: str = 
     if not template_name:
         return f"You are a DevOps AI assistant for {tool_type}. Only return valid code. No explanations or markdown.\nPrompt: {prompt}"
     template = env.get_template(template_name)
-    return template.render(prompt=prompt, context=context)
+    return template.render(prompt=prompt, tool=tool_type, context=context)
 
 def is_unresolved(response: str) -> bool:
     return any(keyword in response.lower() for keyword in [
@@ -147,11 +147,7 @@ def email_issue(issue_data: dict):
         print(f"Email failed: {e}")
 
 FOOTER = """
----
 
-If you'd like hands-on help deploying this architecture — including infrastructure setup, CI/CD integration, or production-ready hosting — please contact us at support@codeweave.co
-
-We offer guided deployment, audits, and dedicated support for teams and businesses.
 """
 
 @app.post("/generate")
