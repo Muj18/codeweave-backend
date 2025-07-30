@@ -39,65 +39,90 @@ def detect_task_type(prompt: str, tool: str) -> str:
     p = prompt.lower()
     t = tool.lower()
 
+    kubernetes_and_containers = {
+        "kubernetes", "docker", "openshift", "helm", "istio"
+    }
+
+    cloud_and_infra = {
+        "aws", "azure", "gcp", "terraform", "flux", "ansible", "vault",
+        "jenkins", "packer", "aws lambda"
+    }
+
+    genai = {
+        "chatbot builder", "pdf / document qa bot", "rag pipeline",
+        "data preprocessing pipeline", "fastapi backend for genai",
+        "agent & tool builder", "model fine-tuning starter",
+        "model training pipeline", "llm evaluation toolkit", "llm deployment",
+        "vector db", "streamlit dashboard", "streamlit app", "langchain",
+        "fine-tuning", "openai api", "hugging face", "agent & tools",
+        "fastapi backend"
+    }
+
+    data_mlops = {
+        "airflow / dbt", "vertex ai / sagemaker", "data preprocessing pipeline"
+    }
+
+    code_languages = {
+        "python", "go", "bash", "typescript", "javascript", "java", "c#", "rust",
+        "powershell", "shell script", "other (script/code)", "bash script", "python script", "go script"
+    }
+
+    mlops_keywords = [
+    "mlops", "ml pipeline", "ml model", "model training", "model testing", "model validation",
+    "model deployment", "model serving", "model monitoring", "model registry", "model versioning",
+    "training loop", "training job", "experiment tracking", "hyperparameter tuning", "batch training",
+    "automl", "pytorch", "tensorflow", "onnx", "tfx", "kubeflow", "mlflow", "vertex ai", "sagemaker",
+    "azure ml", "google ai platform", "ai platform", "training pipeline", "model evaluation", 
+    "online inference", "offline inference", "real-time prediction", "docker for ml", "ci/cd for ml",
+    "deploy model", "test model", "fine-tune model", "llm training", "training script", "training dataset"
+    ]
+
+
+    data_architecture_keywords = [
+    "data architecture", "data modeling", "data schema", "data ingestion", "data transformation",
+    "data pipeline", "data quality", "data validation", "data integration", "data lineage",
+    "data lake", "datalake", "data warehouse", "data mart", "data platform", "data flow",
+    "etl", "elt", "extract transform load", "batch processing", "stream processing",
+    "bigquery", "redshift", "snowflake", "synapse", "hudi", "iceberg", "delta lake", "delta",
+    "lakehouse", "schema evolution", "columnar storage", "parquet", "avro", "orc", "data mesh",
+    "metadata store", "data catalog", "data governance", "dbt", "airflow", "apache beam", "glue job",
+    "warehouse design", "data system", "data sync", "data sharding", "big data", "distributed storage"
+    ]
+
 
     troubleshooting_keywords = [
         "error", "bug", "crash", "timeout", "stack trace", "traceback",
         "failed", "issue", "not working", "unexpected", "exception", "panic"
     ]
 
-    code_gen_indicators = [
-        "main.tf", "variables.tf", "outputs.tf", "terraform file", "terraform setup",
-        "dockerfile", "docker-compose", "helm chart", "cloudformation", "pipeline file",
-        "ci/cd yaml", "cicd file", "workflow file", ".yaml", ".yml", ".json", ".hcl",
-        ".tf", ".py", ".sh", "generate file", "write file", "create file", "multifile"
-    ]
-    if any(word in p for word in code_gen_indicators):
-        return "genai"
-
-    architecture_keywords = [
-        "architecture", "design", "blueprint", "infrastructure", "high availability",
-        "multi-tenant", "scaling", "autoscaling", "deployment", "cluster",
-        "cloud", "load balancer", "vpc", "fargate", "ecs", "eks", "aks", "gke",
-        "s3", "rds", "lambda", "container", "microservice", "serverless",
-        "distributed", "kubernetes", "helm", "terraform", "ansible", "packer",
-        "vault", "cicd", "ci/cd", "jenkins", "github actions", "gitlab ci",
-        "devops", "infrastructure as code", "iac", "provision", "pipeline"
-    ]
-
-    genai_keywords = [
-        "rag", "llm", "langchain", "agent", "retriever", "embedding", "tokenizer",
-        "fine-tune", "finetune", "finetuning", "vector db", "faiss", "pinecone",
-        "openai", "hugging face", "model training", "prompt", "prompt tuning",
-        "streamlit", "inference", "transformer", "dataset", "generation",
-        "qa bot", "pdf bot", "chatbot", "evaluation", "summarize", "sentiment"
-    ]
+    normalized_tool = t.strip().lower()
 
     if any(word in p for word in troubleshooting_keywords):
         return "troubleshooting"
-    elif any(word in p for word in genai_keywords):
-        return "genai"
-    elif any(word in p for word in architecture_keywords):
-        return "architecture"
 
-    if t in {
-        "chatbot builder", "pdf / document qa bot", "rag pipeline", "data preprocessing pipeline",
-        "fastapi backend for genai", "agent & tool builder", "model fine-tuning starter",
-        "model training pipeline", "llm evaluation toolkit", "llm deployment", "vector db",
-        "streamlit dashboard", "streamlit app", "langchain", "fine-tuning", "openai api",
-        "hugging face", "agent & tools",  "fastapi backend", "bash script", "python script", "go script",
-    }:
-        return "genai"
-
-    if t in {
-        "aws", "azure", "gcp", "terraform", "kubernetes", "docker", "helm", "flux", "ansible",
-        "vault", "jenkins", "packer", "aws lambda",
-    }:
-        return "architecture"
-
-    if t == "troubleshooting":
+    if normalized_tool in kubernetes_and_containers:
         return "troubleshooting"
 
-    return "code_gen"
+    if normalized_tool in cloud_and_infra:
+        return "architecture"
+
+    if normalized_tool in genai:
+        return "genai"
+
+    if normalized_tool in data_mlops:
+        if any(word in p for word in mlops_keywords):
+            return "mlops"
+        if any(word in p for word in data_architecture_keywords):
+            return "data_architecture"
+        return "architecture" 
+
+    if normalized_tool in code_languages:
+        return "code_gen"
+
+    if normalized_tool == "troubleshooting":
+        return "troubleshooting"
+
+    return "architecture"
 
 def render_template(task_type: str, tool_type: str, prompt: str, context: str = None):
     template_name = None
@@ -106,13 +131,19 @@ def render_template(task_type: str, tool_type: str, prompt: str, context: str = 
         template_name = "genai_architecture.jinja2"
     elif task_type == "architecture":
         template_name = "solutions_architecture.jinja2"
+    elif task_type == "mlops":
+        template_name = "mlops_architecture.jinja2"
+    elif task_type == "data_architecture":
+        template_name = "data_architecture.jinja2"
     elif task_type == "troubleshooting":
         template_name = "troubleshooting.jinja2"
     elif task_type == "code_gen":
-        return f"You are a DevOps AI assistant for {tool_type}. Only return valid code. No explanations or markdown.\nPrompt: {prompt}"
+        template_name = "code_generation.jinja2"
+
 
     if not template_name:
         return f"You are a DevOps AI assistant for {tool_type}. Only return valid code. No explanations or markdown.\nPrompt: {prompt}"
+
     template = env.get_template(template_name)
     return template.render(prompt=prompt, tool=tool_type, context=context)
 
