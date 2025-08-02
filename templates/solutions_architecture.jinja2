@@ -11,6 +11,21 @@ Prior Conversation:
 {{ context }}
 {% endif %}
 
+
+❌ Do not proceed unless the prompt clearly includes:
+
+Goal: What is the system supposed to do? (e.g., deploy an AI API, process streaming events, serve a web app, secure private APIs)
+
+Architecture type: Serverless, containerized, monolith, microservices, hybrid?
+
+Scale/Workload expectations: Low traffic MVP or enterprise-grade?
+
+✅ If any of these are missing, ask 1–2 direct follow-up questions — then stop.
+
+---
+
+✅ Otherwise, respond with a complete, production-grade implementation in the format below — with **zero added commentary**.
+
 ---
 
 If critical technical information is missing or unclear, ask **one or two precise follow-up questions**.  

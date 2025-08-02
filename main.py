@@ -34,6 +34,7 @@ class PromptRequest(BaseModel):
     tool: str
     prompt: str
     context: str = None
+    plan: str = "free"
 
 def detect_task_type(prompt: str, tool: str) -> str:
     p = prompt.lower()
@@ -68,31 +69,30 @@ def detect_task_type(prompt: str, tool: str) -> str:
     }
 
     mlops_keywords = [
-    "mlops", "ml pipeline", "ml model", "model training", "model testing", "model validation",
-    "model deployment", "model serving", "model monitoring", "model registry", "model versioning",
-    "training loop", "training job", "experiment tracking", "hyperparameter tuning", "batch training",
-    "automl", "pytorch", "tensorflow", "onnx", "tfx", "kubeflow", "mlflow", "vertex ai", "sagemaker",
-    "azure ml", "google ai platform", "ai platform", "training pipeline", "model evaluation", 
-    "online inference", "offline inference", "real-time prediction", "docker for ml", "ci/cd for ml",
-    "deploy model", "test model", "fine-tune model", "llm training", "training script", "training dataset"
+        "mlops", "ml pipeline", "ml model", "model training", "model testing", "model validation",
+        "model deployment", "model serving", "model monitoring", "model registry", "model versioning",
+        "training loop", "training job", "experiment tracking", "hyperparameter tuning", "batch training",
+        "automl", "pytorch", "tensorflow", "onnx", "tfx", "kubeflow", "mlflow", "vertex ai", "sagemaker",
+        "azure ml", "google ai platform", "ai platform", "training pipeline", "model evaluation", 
+        "online inference", "offline inference", "real-time prediction", "docker for ml", "ci/cd for ml",
+        "deploy model", "test model", "fine-tune model", "llm training", "training script", "training dataset"
     ]
 
 
     data_architecture_keywords = [
-    "data architecture", "data modeling", "data schema", "data ingestion", "data transformation",
-    "data pipeline", "data quality", "data validation", "data integration", "data lineage",
-    "data lake", "datalake", "data warehouse", "data mart", "data platform", "data flow",
-    "etl", "elt", "extract transform load", "batch processing", "stream processing",
-    "bigquery", "redshift", "snowflake", "synapse", "hudi", "iceberg", "delta lake", "delta",
-    "lakehouse", "schema evolution", "columnar storage", "parquet", "avro", "orc", "data mesh",
-    "metadata store", "data catalog", "data governance", "dbt", "airflow", "apache beam", "glue job",
-    "warehouse design", "data system", "data sync", "data sharding", "big data", "distributed storage"
+        "data architecture", "data modeling", "data schema", "data ingestion", "data transformation",
+        "data pipeline", "data quality", "data validation", "data integration", "data lineage",
+        "data lake", "datalake", "data warehouse", "data mart", "data platform", "data flow",
+        "etl", "elt", "extract transform load", "batch processing", "stream processing",
+        "bigquery", "redshift", "snowflake", "synapse", "hudi", "iceberg", "delta lake", "delta",
+        "lakehouse", "schema evolution", "columnar storage", "parquet", "avro", "orc", "data mesh",
+        "metadata store", "data catalog", "data governance", "dbt", "airflow", "apache beam", "glue job",
+        "warehouse design", "data system", "data sync", "data sharding", "big data", "distributed storage"
     ]
 
 
     troubleshooting_keywords = [
-        "error", "bug", "crash", "timeout", "stack trace", "traceback",
-        "failed", "issue", "not working", "unexpected", "exception", "panic"
+        "error", "bug", "crash"
     ]
 
     normalized_tool = t.strip().lower()
@@ -185,6 +185,7 @@ FOOTER = """
 async def generate_code(req: PromptRequest):
     task_type = detect_task_type(req.prompt, req.tool)
     tool_type = req.tool
+    plan = req.plan or "free"
     system_prompt = render_template(task_type, tool_type, req.prompt, req.context)
     temperature = 0.3 if task_type in ["troubleshooting", "architecture"] else 0.2
 
@@ -192,7 +193,7 @@ async def generate_code(req: PromptRequest):
         try:
             full_response = ""
             stream = await client.chat.completions.create(
-                model="gpt-4",
+                model = "gpt-3.5-turbo" if plan == "free" else "gpt-4",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": req.prompt}

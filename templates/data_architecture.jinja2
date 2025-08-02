@@ -10,10 +10,20 @@ Prior Conversation:
 {% endif %}
 
 ---
+❌ Do not proceed unless the prompt clearly includes:
 
-If critical technical information is missing or unclear, ask **one or two precise follow-up questions**.  
-Do not make assumptions — clarify before diagnosing.  
-✅ Otherwise, provide a complete production-grade answer in the following format:
+Goal: What is the data system intended to support? (e.g., analytics dashboard, ML model, real-time monitoring)
+
+Data sources: What types of data or systems are involved? (e.g., PostgreSQL, S3, Kafka, APIs)
+
+Workload type: Is this batch ETL, streaming, or hybrid?
+
+Cloud preference (optional): AWS, GCP, Azure, on-prem?
+
+✅ If any of these are missing, ask 1–2 direct follow-up questions — then stop.
+
+✅ Otherwise, provide an answer in the following format:
+
 
 1. ✅ Summary of Recommended Data Architecture
 Summarize the best-fit data architecture based on the user’s use case. Include:

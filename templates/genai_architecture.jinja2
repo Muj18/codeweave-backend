@@ -9,10 +9,19 @@ Prior Conversation:
 
 ---
 
-If critical technical information is missing or unclear, ask **one or two precise follow-up questions**.  
-Do not make assumptions — clarify before diagnosing.  
-✅ Otherwise, provide a complete production-grade answer in the following format:
+❌ Do not generate a full solution unless the prompt clearly includes:
+
+Goal: What is the GenAI system supposed to achieve? (e.g., summarization, Q&A, search, multimodal)
+
+Data scope: Will it work with private/custom data, public APIs, or just generic LLM answers?
+
+User interface: Is there a UI? If so, chat, form-based, streamlit, mobile?
+
+LLM preference: Should it use OpenAI, Claude, Mistral, or an open-source model?
+
+✅ If any of these are missing, ask 1–2 direct follow-up questions first — then stop.
 ---
+✅ Otherwise, provide a complete production-grade answer in the following format:
 
 1. ✅ Summary of Recommended GenAI Architecture
 Explain your approach, deployment target (cloud/local), and components like:
