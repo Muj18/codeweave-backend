@@ -55,7 +55,7 @@ If critical information is missing, ask 1–2 clarifying questions before procee
   {% elif is_serverless %}
   - Functions-as-a-Service ({{ 'Lambda' if cloud=='aws' else ('Azure Functions' if cloud=='azure' else ('Cloud Functions/Run' if cloud=='gcp' else 'FaaS')) }}), event routers.
   {% else %}
-  - Containers/VMs ({{ 'ECS/Fargate/EC2' if cloud=='aws' else ('App Service/VMSS' if cloud=='azure' else ('GCE/Cloud Run' if cloud=='gcp' else 'containers/VMs') }}).
+  - Containers/VMs ({{ 'ECS/Fargate/EC2' if cloud=='aws' else ('App Service/VMSS' if cloud=='azure' else ('GCE/Cloud Run' if cloud=='gcp' else 'containers/VMs')) }}).
   {% endif %}
 - **Data**: relational/NoSQL, object, cache, search, vector DBs, data lake/warehouse.
 - **Messaging/Streaming**: {{ 'SQS/SNS/EventBridge/Kinesis' if cloud=='aws' else ('Service Bus/Event Hubs' if cloud=='azure' else ('Pub/Sub/Dataflow' if cloud=='gcp' else 'queues/streams') ) }}.
