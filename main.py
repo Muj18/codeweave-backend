@@ -132,7 +132,7 @@ def render_template(task_type: str, tool_type: str, prompt: str, context: str = 
 
     if task_type == "platform_audit":
         template_name = "platform_audit.jinja2"
-    if task_type == "genai":
+    elif task_type == "genai":
         template_name = "genai_architecture.jinja2"
     elif task_type == "architecture":
         template_name = "solutions_architecture.jinja2"
@@ -191,25 +191,37 @@ async def generate_code(req: PromptRequest):
     task_type = detect_task_type(req.prompt, req.tool)
     tool_type = req.tool
     plan = req.plan or "free"
-    system_prompt = render_template(task_type, tool_type, req.prompt, req.context)
-    temperature = 0.3 if task_type in ["troubleshooting", "architecture"] else 0.2
+
+    # Render your Jinja2 template fully (with the user's prompt inside it)
+    rendered_prompt = render_template(task_type, tool_type, req.prompt, req.context)
+
+    # Keep creativity low for audit/architecture style tasks
+    temperature = 0.3 if task_type in ["troubleshooting", "architecture", "platform_audit"] else 0.2
+
+    # (Optional) Debug: confirm you're sending the right thing
+    print("[DEBUG] RENDERED_PROMPT:\n", rendered_prompt[:2000])
 
     async def token_stream():
         try:
             full_response = ""
             stream = await client.chat.completions.create(
                 model = "gpt-3.5-turbo" if plan == "free" else "gpt-4",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": req.prompt}
+                messages = [
+                    {
+                        "role": "system",
+                        "content": "You are a senior cloud architect and DevOps consultant. Follow the provided structure exactly."
+                    },
+                    {
+                        "role": "user",
+                        "content": rendered_prompt  # send the rendered template here
+                    }
                 ],
-                temperature=temperature,
-                max_tokens=2000,
-                stream=True,
+                temperature = temperature,
+                max_tokens = 2000,
+                stream = True,
             )
-            buffer = []
-            total_length = 0
 
+            total_length = 0
             async for chunk in stream:
                 content = chunk.choices[0].delta.content
                 if content:
@@ -217,11 +229,12 @@ async def generate_code(req: PromptRequest):
                     full_response += content
                     total_length += len(content)
 
-            if total_length > 700 and task_type in ["architecture", "genai"]:
+            # Optional footer for long architecture outputs
+            if total_length > 700 and task_type in ["architecture", "genai", "platform_audit"]:
                 yield FOOTER
-            
+
+            # Log/email unresolved issues regardless of footer condition
             if is_unresolved(full_response):
-                print("Unresolved issue detected, logging and emailing...")
                 issue_data = {
                     "prompt": req.prompt,
                     "context": req.context,
@@ -230,10 +243,8 @@ async def generate_code(req: PromptRequest):
                     "response": full_response
                 }
                 log_unresolved_issue(issue_data)
-                print("Logging unresolved issue to file...")
                 email_issue(issue_data)
-                print("Emailing unresolved issue to support...")
-                
+
         except Exception as e:
             yield f"\n\n[Error]: {str(e)}"
 
