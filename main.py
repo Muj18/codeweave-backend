@@ -81,7 +81,6 @@ def detect_task_type(prompt: str, tool: str) -> str:
         "deploy model", "test model", "fine-tune model", "llm training", "training script", "training dataset"
     ]
 
-
     data_architecture_keywords = [
         "data architecture", "data modeling", "data schema", "data ingestion", "data transformation",
         "data pipeline", "data quality", "data validation", "data integration", "data lineage",
@@ -92,7 +91,6 @@ def detect_task_type(prompt: str, tool: str) -> str:
         "metadata store", "data catalog", "data governance", "dbt", "airflow", "apache beam", "glue job",
         "warehouse design", "data system", "data sync", "data sharding", "big data", "distributed storage"
     ]
-
 
     troubleshooting_keywords = [
         "error", "bug", "crash"
@@ -145,7 +143,6 @@ def render_template(task_type: str, tool_type: str, prompt: str, context: str = 
     elif task_type == "code_gen":
         template_name = "code_generation.jinja2"
 
-
     if not template_name:
         return f"You are a DevOps AI assistant for {tool_type}. Only return valid code. No explanations or markdown.\nPrompt: {prompt}"
 
@@ -190,7 +187,7 @@ FOOTER = """
 async def generate_code(req: PromptRequest):
     task_type = detect_task_type(req.prompt, req.tool)
     tool_type = req.tool
-    plan = req.plan or "free"
+    plan = (req.plan or "free").lower()
 
     # Render your Jinja2 template fully (with the user's prompt inside it)
     rendered_prompt = render_template(task_type, tool_type, req.prompt, req.context)
@@ -198,15 +195,22 @@ async def generate_code(req: PromptRequest):
     # Keep creativity low for audit/architecture style tasks
     temperature = 0.3 if task_type in ["troubleshooting", "architecture", "platform_audit"] else 0.2
 
+    # Model: use gpt-4o on non-free plans
+    model = "gpt-3.5-turbo" if plan == "free" else "gpt-4o"
+
+    # Allow longer responses for platform audits
+    max_tokens = 5000 if task_type == "platform_audit" else 2000
+
     # (Optional) Debug: confirm you're sending the right thing
+    print("[DEBUG] TASK:", task_type, "| PLAN:", plan, "| MODEL:", model, "| MAX_TOKENS:", max_tokens)
     print("[DEBUG] RENDERED_PROMPT:\n", rendered_prompt[:2000])
 
     async def token_stream():
         try:
             full_response = ""
             stream = await client.chat.completions.create(
-                model = "gpt-3.5-turbo" if plan == "free" else "gpt-4",
-                messages = [
+                model=model,
+                messages=[
                     {
                         "role": "system",
                         "content": "You are a senior cloud architect and DevOps consultant. Follow the provided structure exactly."
@@ -216,9 +220,9 @@ async def generate_code(req: PromptRequest):
                         "content": rendered_prompt  # send the rendered template here
                     }
                 ],
-                temperature = temperature,
-                max_tokens = 2000,
-                stream = True,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=True,
             )
 
             total_length = 0
