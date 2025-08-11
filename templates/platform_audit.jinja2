@@ -1,212 +1,69 @@
-Respond with a comprehensive, high-impact platform audit for a modern cloud-native team. Think like a staff-level architect conducting a live platform review with a CTO. Prioritize cost, performance, developer velocity, and operational simplicity.
+Respond with a **concise, high-impact platform audit** in the style of a McKinsey/Bain engagement summary — designed for a CTO briefing a board.  
+Be decisive, quantified, and tailored to the prompt. Avoid generic "best practices."
 
 Prompt: {{ prompt }}
 Tool concerned: Platform Audit
-
-Always act like a top-tier consultant for a global enterprise. Do NOT give generic advice. Be decisive and data-driven.
 
 {% if context %}
 Prior Conversation:
 {{ context }}
 {% endif %}
 
-❌ Do not proceed unless the prompt includes information like:
-- Cloud usage or provider (AWS, Azure, GCP, on-prem)
-- What workloads are being run (APIs, ML, GenAI, databases)
-- Team size or platform maintenance concerns
-- Mention of Kubernetes, CI/CD, or cloud-native tools
+❌ Do not proceed unless the prompt contains:
+- Cloud provider(s)
+- Workload type(s)
+- Team size or ops scope
+- Mention of Kubernetes, CI/CD, or modern platform tools
 
-✅ If this information is missing, ask 1–2 direct clarifying questions and stop.
----
-
-✅ Otherwise, deliver a production-grade platform audit across the following dimensions:
+If missing, ask 1–2 clarifying questions and stop.
 
 ---
 
-## 🔍 Executive Summary
-- High-level findings across cloud, DevOps, GenAI, Kubernetes, MLOps
-- Estimate annual waste or inefficiencies
-- Identify top 3 opportunities for simplification or cost reduction
+## 🚀 Executive Summary — 90-Day ROI Path
+- **Immediate Savings:** Quantify and list top 2–3 cost cuts (e.g., “Rightsize EKS nodes: £65k/year”).
+- **Performance Lift:** One-line measurable gain (e.g., “Reduce API P99 latency by 40%”).
+- **Risk Reduction:** Key security or compliance gap closed.
 
 ---
 
-## ☁️ Cloud & Infrastructure Review
-- Cloud providers in use (AWS, Azure, etc.)
-- Region strategy: single-region vs multi-region
-- Overprovisioning of VMs, EKS, AKS, storage
-- Cost per workload or per customer (if known)
-- Underutilized managed services or expensive hosted tools
+## 📈 Quick Wins (0–90 Days)
+- Itemised, ROI-backed actions that recover cost or unstick delivery.
+- Include % or £ impact where possible.
 
 ---
 
-## 🌍 Regional Architecture & Compliance Considerations
-
-{% set p = prompt.lower() %}
-
-{% if "bahrain" in p or "ksa" in p or "riyadh" in p %}
-- AWS Bahrain (me-south-1) offers lower latency and regional compliance for Saudi-based workloads.
-- Watch for cross-region S3, RDS, and EKS replication — costly and unnecessary in some GCC cases.
-
-{% elif "uae" in p or "dubai" in p %}
-- Azure UAE regions are compliant for banking, healthcare, and government data — ensure AI endpoints are region-local.
-- Azure services like App Insights or AI Studio may still use out-of-region processing — verify endpoints.
-
-{% elif "qatar" in p or "doha" in p %}
-- GCP Doha region enables compliance for Qatar-based orgs; multi-cloud with AWS Bahrain is common.
-- Avoid egress-heavy pipelines between AWS and GCP due to high intercloud transfer costs.
-
-{% elif "london" in p or "uk" in p or "ireland" in p %}
-- GDPR applies — make sure secrets, logs, backups are encrypted and stored regionally.
-- Consider using AWS EU West (London/Ireland) with data residency flags in Terraform.
-
-{% elif "germany" in p or "france" in p or "europe" in p or "eu" in p %}
-- Strong regional data privacy laws (GDPR, Schrems II).
-- Choose single-region services with strong audit trails and zero external replication unless required.
-
-{% elif "usa" in p or "us-east" in p or "virginia" in p or "oregon" in p %}
-- Consider savings plans for EKS and EC2 in US regions — especially Graviton2 nodes.
-- US East 1 suffers frequent API throttling — use retries and circuit breakers.
-
-{% elif "canada" in p %}
-- AWS Canada and Azure Toronto are solid choices for compliance-sensitive sectors.
-- Note slower rollout of new services — verify regional availability before committing.
-
-{% elif "singapore" in p or "jakarta" in p or "southeast asia" in p %}
-- Use AWS ap-southeast-1 or ap-southeast-3 for best latency and uptime.
-- Beware chatbots or GenAI using endpoints in US — roundtrip latency can break experience.
-
-{% elif "australia" in p or "sydney" in p %}
-- Consider AWS Sydney or Azure Australia East.
-- High inter-region costs — consolidate to one provider unless multi-region DR is critical.
-
-{% elif "brazil" in p or "latam" in p or "mexico" in p %}
-- Use GCP São Paulo or AWS South America for cost-effective, localized infra.
-- Spot instance availability is limited — test before using them for CI/CD or RAG jobs.
-
-{% elif "nigeria" in p or "kenya" in p or "south africa" in p %}
-- Azure South Africa North is best for compliance. AWS Cape Town also available but limited services.
-- Latency to EU is acceptable — consider CDN with edge caching if user base is split.
-
-{% elif "china" in p %}
-- For China, use region-specific partners (e.g., AWS China via Sinnet).
-- Regulatory firewalls require redesign of observability, CI/CD, and LLM deployments.
-
-{% else %}
-- Consider data residency, cloud service availability, and latency-sensitive workloads for your specific geography.
-- Verify that your region supports all required services — especially for GenAI and MLOps toolchains.
-
-{% endif %}
+## 🧠 Strategic Architecture Notes
+- Only recommend service mesh, multi-region, or advanced K8s patterns if scale/SLOs justify it.
+- Flag *overengineering* patterns.
 
 ---
 
-## ⚙️ DevOps & Platform Engineering
-- CI/CD pipeline sprawl or misalignment
-- Secrets management method and security risks
-- Developer experience: self-service vs platform bottlenecks
-- Alert fatigue, observability gaps (logs only, no metrics/tracing?)
-- Number of CNCF tools and overlap (e.g., multiple GitOps, metrics, secrets)
+## ☁️ Platform Review
+**Cloud & Infra:** Over/under-provisioning, region fit, cost per workload.  
+**DevOps & Delivery:** Pipeline efficiency, automation, developer self-service.  
+**Kubernetes:** Node & pod efficiency, ingress, scaling configs.  
+**GenAI/MLOps:** GPU utilisation, RAG pipeline fit, vector DB sprawl.  
+**Security/IAM:** Access scope, secret rotation, zero-trust posture.
 
 ---
 
-## 🐳 Kubernetes Overengineering Check
-- Pod-to-node ratio and cost vs actual usage
-- Autoscaling configuration and effectiveness
-- Cluster per team vs multi-tenant setup
-- Ingress and service mesh bloat
-- Use of tools like ArgoCD, Prometheus, External Secrets — necessary?
+## 📊 KPI Scorecard
+| Dimension | Score/10 | Notable Gaps |
+|-----------|----------|--------------|
+| Cost Efficiency | {{ wa_cost or "TBD" }} | e.g., Idle LB, no SP |
+| Security | {{ wa_security or "TBD" }} | e.g., Long-lived keys |
+| Reliability | {{ wa_reliability or "TBD" }} | e.g., No DR test |
+| Delivery Velocity | {{ wa_operational or "TBD" }} | e.g., Manual approvals |
 
 ---
 
-## 🧠 GenAI & MLOps Workload Analysis
-- Hosting LLMs or using API-based access?
-- Self-hosted vs managed vector DB
-- Unused GPU instances or idle training infra?
-- Model lifecycle management (e.g., versioning, rollbacks)
-- RAG pipeline, chatbots, retrievers — are they overbuilt or scale-appropriate?
+## 💡 Next Steps
+List 3–4 key actions with measurable impact — e.g.:  
+- ✅ Cut £X/year infra waste via rightsizing + LB consolidation  
+- ✅ Deploy secrets rotation with OIDC to eliminate long-lived keys  
+- ✅ Consolidate CNCF toolchain for ops simplicity
 
 ---
 
-## 🔐 Security & IAM Sanity Check
-- Centralized secrets store vs console/manual secrets
-- Audit trail for sensitive operations
-- Production access model: Zero Trust or shared keys?
-- Are secrets in Terraform or SOPs?
+📬 For a full hands-on audit, contact support@codeweave.co — direct engagement covers platform tuning, migration reduction, and developer productivity enablement.
 
----
-
-## 🧭 Benchmark Alignment & Scores
-
-{% set txt = prompt.lower() %}
-{% set cloud = "aws" if "aws" in txt else ("azure" if "azure" in txt else ("gcp" if "gcp" in txt else "multi")) %}
-
-### AWS Well-Architected (or equivalent pillars)
-- **Operational Excellence**: {{ wa_operational or "TBD" }}/10
-- **Security**: {{ wa_security or "TBD" }}/10
-- **Reliability**: {{ wa_reliability or "TBD" }}/10
-- **Performance Efficiency**: {{ wa_performance or "TBD" }}/10
-- **Cost Optimization**: {{ wa_cost or "TBD" }}/10
-- **Sustainability** (if applicable): {{ wa_sustainability or "TBD" }}/10
-
-**Gaps & Actions**
-- Ops: {{ wa_ops_gap or "Missing runbooks, no game days. → Add incident runbooks + quarterly game days." }}
-- Sec: {{ wa_sec_gap or "Secrets partly in CI. → Move to managed secrets + short-lived tokens (OIDC)." }}
-- Rel: {{ wa_rel_gap or "No DR test evidence. → Define RTO/RPO and test cross-AZ restore." }}
-- Perf: {{ wa_perf_gap or "No load tests. → Add k6/Gatling to CI with SLOs." }}
-- Cost: {{ wa_cost_gap or "Idle nodes, no Savings Plans. → Right-size + commit discounts." }}
-
-### CIS Benchmarks (cloud/K8s)
-- **Scope**: {{ "CIS " ~ cloud|upper ~ " Foundations + CIS Kubernetes" if "kubernetes" in txt else "CIS " ~ cloud|upper ~ " Foundations" }}
-- **Status (sample controls)**  
-  - **CIS-1.x IAM**: {{ cis_iam or "Partial" }} — Enforce MFA, least privilege, no long-lived keys.  
-  - **CIS-2.x Logging**: {{ cis_logging or "Partial" }} — Centralize audit logs, immutable retention.  
-  - **CIS-3.x Networking**: {{ cis_net or "Partial" }} — Deny-all SG/NSG defaults, restricted egress.  
-  - **CIS-4.x Monitoring**: {{ cis_mon or "Partial" }} — Alerts on root usage and config drift.  
-  - **CIS-K8s**: {{ cis_k8s or ("N/A" if "kubernetes" not in txt else "Partial") }} — Admission controls, PodSecurity, etc.
-
-**Top CIS Remediations**
-- {{ cis_fix_1 or "Disable public access on state stores (S3/Blob/GCS) and enforce TLS + SSE/KMS." }}
-- {{ cis_fix_2 or "Enable CloudTrail/Activity Logs org-wide; route to write-once bucket." }}
-- {{ cis_fix_3 or "For K8s: enforce PodSecurity / seccomp / read-only root FS; disable anonymous auth." }}
-
-### FinOps Alignment
-- **Inform** (tagging, allocation, showback): {{ finops_inform or "Partial" }}  
-- **Optimize** (commit discounts, right-size, autoscale): {{ finops_optimize or "Partial" }}  
-- **Operate** (budgets, alerts, KPIs): {{ finops_operate or "Minimal" }}
-
-**Immediate FinOps Wins**
-- {{ finops_win_1 or "Tagging coverage <80%. → Enforce tags via policy & CI checks." }}
-- {{ finops_win_2 or "No Savings Plans/Committed Use. → Commit baseline for 20–40% savings." }}
-- {{ finops_win_3 or "Idle/stale volumes/LBs. → Weekly cleanup job + budget alerts." }}
-
-### Compliance Hooks (optional, if relevant)
-- **Regimes**: {{ regimes or "SOC 2 / ISO 27001 (if applicable)" }}  
-- **Evidence Gaps**: {{ evidence_gaps or "No change management records, no quarterly access reviews." }}  
-- **Next Steps**: {{ compliance_next or "Add ticketed change control; quarterly IAM reviews; retain logs ≥ 1 year." }}
-
----
-
-## 💸 Cost Efficiency Scorecard
-- Cluster cost vs workload count (waste %)
-- License/tooling cost breakdown (monitoring, GitOps, secrets)
-- Recommendation to downgrade, right-size, or consolidate
-- Cost per user/customer (if estimable)
-- Spot instance or serverless opportunities missed?
-
----
-
-## 📌 Recommendations & Next Steps
-
-List 3–5 strategic actions the user should take next:
-- ✅ Migrate X to managed service Y to save £Z/year
-- ✅ Replace 4 CNCF tools with ArgoCD + SOPs
-- ✅ Decommission secondary K8s cluster, route via Traffic Manager
-
-Then suggest which tool card they should open next:
-- 👉 Use the Kubernetes tool card to redesign your cluster
-- 👉 Use the GenAI tool card to optimize RAG + LLM hosting
-- 👉 Use the MLOps card to simplify model lifecycle and retraining
-- 👉 Use the Troubleshooting card to fix specific alerting + observability pain
-
----
-
-📬 To perform a full hands-on architecture audit, contact support@codeweave.co — our team delivers direct engagement for platform tuning, migration reduction, and developer productivity enablement.
