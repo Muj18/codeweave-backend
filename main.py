@@ -40,6 +40,9 @@ def detect_task_type(prompt: str, tool: str) -> str:
     p = prompt.lower()
     t = tool.lower()
 
+    if t == "platform audit":
+        return "platform_audit"
+
     kubernetes_and_containers = {
         "kubernetes", "docker", "openshift", "helm", "istio"
     }
