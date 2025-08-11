@@ -130,6 +130,8 @@ def detect_task_type(prompt: str, tool: str) -> str:
 def render_template(task_type: str, tool_type: str, prompt: str, context: str = None):
     template_name = None
 
+    if task_type == "platform_audit":
+        template_name = "platform_audit.jinja2"
     if task_type == "genai":
         template_name = "genai_architecture.jinja2"
     elif task_type == "architecture":
