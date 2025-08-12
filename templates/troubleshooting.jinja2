@@ -22,28 +22,38 @@ Prior Conversation:
 
 ✅ Otherwise, respond in this **exact format**:
 
-## 1. Likely Root Cause Hypotheses
-List 2–4 probable causes **across layers**, each with:
-- A short technical rationale linking symptoms to the cause
-- Probability rating: High / Medium / Low
+## 1. ✅ Likely Root Cause Hypotheses
+List 2–4 probable causes across layers:
+
+- **Application Layer** – e.g., memory leaks, unhandled exceptions, config mismatches  
+  *Include rationale + probability rating (High/Medium/Low)*
+
+- **Platform Layer** – e.g., Kubernetes probe failures, node pressure, service mesh issues  
+  *Include rationale + probability*
+
+- **Infrastructure Layer** – e.g., AWS RDS connection limits, API Gateway timeouts, DNS errors  
+  *Include rationale + probability*
+
+- **External Dependencies** – e.g., 3rd-party API failures, CI/CD runner issues  
+  *Include rationale + probability*
 
 ---
 
-## 2. Prioritized Step-by-Step Resolution
+## 2. 🧭 Prioritized Step-by-Step Resolution
 
-### Stage 1: Quick, low-risk checks
+### Stage 1 – Quick, low-risk checks
 ```bash
 <investigation commands here>
 <validation commands here>
 ```
 
-### Stage 2: Configuration adjustments
+### Stage 2 – Configuration adjustments
 ```bash
 <investigation commands here>
 <validation commands here>
 ```
 
-### Stage 3: Redeployments, scaling, or infrastructure changes
+### Stage 3 – Redeployments, scaling, or infra changes
 ```bash
 <investigation commands here>
 <validation commands here>
@@ -51,8 +61,8 @@ List 2–4 probable causes **across layers**, each with:
 
 ---
 
-## 3. Recommended Code or Config Fix
-Start with the filename as a heading, then one clean block per file:
+## 3. 🛠 Recommended Code or Config Fix
+Always start with the filename as a heading, then one clean block per file:
 ```yaml
 # Example for Kubernetes memory fix
 ### deployment.yaml
@@ -65,7 +75,7 @@ resources:
 
 ---
 
-## 4. Cloud & Platform-Specific Notes
+## 4. 🔐 Cloud & Platform-Specific Notes
 {% if "AWS" in prompt or "EKS" in prompt %}
 - IAM roles, SG/NACL rules, NAT Gateway health, CloudWatch log groups
 - Check RDS limits and networking
@@ -77,24 +87,25 @@ resources:
 
 ---
 
-## 5. Monitoring & Prevention
-- Alerts for key metrics (CPU/memory, 5xx, latency)
-- Autoscaler tuning
-- Canary or blue/green deployments
-- Secret management in vaults
-- Retry logic with exponential backoff
+## 5. 📊 Monitoring & Prevention
+- Alerts for key metrics (CPU/memory, 5xx, latency)  
+- HPA/cluster autoscaler tuning  
+- Canary or blue–green deployments for risky changes  
+- Secret management in vaults  
+- Retry logic with exponential backoff  
+- CNCF tools: Prometheus, Grafana, Loki, Argo Rollouts  
 
 ---
 
-## 6. Anti-Patterns to Avoid
-- Hardcoding credentials
-- Using `:latest` tags in production
-- Ignoring warnings from `kubectl describe`
-- No CPU/memory limits
+## 6. ❌ Anti-Patterns to Avoid
+- Hardcoding credentials  
+- Using `:latest` tags in production  
+- Ignoring `kubectl describe` warnings  
+- Missing CPU/memory limits  
 
 ---
 
-## 7. Production Readiness Checklist
+## 7. 📈 Production Readiness Checklist
 ✅ Liveness/readiness probes set  
 ✅ Resource requests/limits configured  
 ✅ CI/CD tested in staging  
@@ -103,5 +114,5 @@ resources:
 
 ---
 
-## 8. Final Thoughts
+## 8. 🧠 Final Thoughts
 > “This is how a senior DevOps engineer would handle this situation in a live production environment.”
