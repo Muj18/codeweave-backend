@@ -18,6 +18,10 @@ import smtplib
 from email.message import EmailMessage
 from typing import Optional
 
+# ✅ For dedupe/guards
+import re
+import hashlib
+
 app = FastAPI()
 
 app.add_middleware(
@@ -150,7 +154,7 @@ def render_template(task_type: str, tool_type: str, prompt: str, context: Option
 
     # ✅ Prevent duplication for Platform Audit by clearing context
     if template_name == "platform_audit.jinja2":
-        context = None  
+        context = None
 
     rendered = template.render(
         prompt=prompt,
@@ -198,12 +202,24 @@ SYSTEM_GUARD = (
     "If you cannot finish due to length, end with: [CONTINUE_NEEDED]."
 )
 
+# ---------- Duplication-proof streaming ----------
+def _norm_text_for_dedupe(s: str) -> str:
+    return re.sub(r"\s+", " ", (s or "").strip().lower())
+
 async def stream_paged_completion(model: str, system_guard: str, initial_user_content: str, desired_cap: int):
     temperature = 0.3
-    max_pages = 6
+    max_pages = 4
     page = 1
     full_text = ""
+    seen_hashes = set()
     current_prompt = initial_user_content
+
+    # Hard stop tokens: if the model restarts or reaches CTA, cut stream
+    HARD_STOP_TOKENS = [
+        "📬 For hands-on execution",
+        "## 🚀 Executive Snapshot",
+        "<<<END_TAIL>>>",
+    ]
 
     while page <= max_pages:
         prompt_tokens = count_tokens(model, current_prompt)
@@ -219,37 +235,57 @@ async def stream_paged_completion(model: str, system_guard: str, initial_user_co
             temperature=temperature,
             max_tokens=max_tokens,
             stream=True,
+            stop=HARD_STOP_TOKENS,  # 🔒 hard guard against restarts
         )
 
         page_buf = ""
         async for chunk in stream:
-            content = chunk.choices[0].delta.content
+            content = chunk.choices[0].delta.content or ""
             if content:
                 page_buf += content
 
-        if "[CONTINUE_NEEDED]" in page_buf:
-            trimmed = page_buf.replace("[CONTINUE_NEEDED]", "").rstrip()
-            if trimmed:
-                yield trimmed
-                full_text += trimmed
-            tail = full_text[-3000:]
-            current_prompt = (
-                initial_user_content
-                + "\n\n---\n"
-                + "Continue from where you left off. Do not repeat prior text. "
-                + "If you hit limit again, end with [CONTINUE_NEEDED].\n"
-                + "Tail context:\n<<<TAIL>>>\n"
-                + tail
-                + "\n<<<END_TAIL>>>"
-            )
-            page += 1
-            continue
-        else:
-            if page_buf and page_buf.strip() not in full_text.strip():
-                yield page_buf
-                full_text += page_buf
-            else:
-                break
+        # --- De-dupe & control flow guards ---
+        if not page_buf.strip():
+            print("[DEBUG] Empty page_buf; stopping.")
+            break
+
+        page_hash = hashlib.sha256(_norm_text_for_dedupe(page_buf).encode()).hexdigest()
+        if page_hash in seen_hashes:
+            print("[DEBUG] Duplicate page detected; stopping.")
+            break
+        seen_hashes.add(page_hash)
+
+        if _norm_text_for_dedupe(page_buf) in _norm_text_for_dedupe(full_text):
+            print("[DEBUG] Page content already contained in full_text; stopping.")
+            break
+
+        if page_buf.count("## 🚀 Executive Snapshot") > 1:
+            first = page_buf.find("## 🚀 Executive Snapshot")
+            second = page_buf.find("## 🚀 Executive Snapshot", first + 1)
+            if second != -1:
+                page_buf = page_buf[:second].rstrip()
+                print("[DEBUG] Trimmed repeated Executive Snapshot block within page.")
+
+        # ✅ Yield clean page
+        yield page_buf
+        full_text += page_buf
+
+        # Continue only if explicitly requested
+        if "[CONTINUE_NEEDED]" not in page_buf:
+            print("[DEBUG] No CONTINUE_NEEDED marker; stopping after this page.")
+            break
+
+        tail = full_text[-3000:]
+        current_prompt = (
+            initial_user_content
+            + "\n\n---\n"
+            + "Continue from where you left off. Do not repeat prior text. "
+              "If you hit limit again, end with [CONTINUE_NEEDED].\n"
+              "Tail context:\n<<<TAIL>>>\n"
+            + tail
+            + "\n<<<END_TAIL>>>"
+        )
+        page += 1
 
     if is_unresolved(full_text):
         log_unresolved_issue({"task": "platform_audit", "response": full_text})
@@ -282,7 +318,8 @@ async def generate_code(req: PromptRequest):
                 desired_cap=desired_cap,
             ):
                 yield chunk
-            if req.tool and req.tool.lower() in ["architecture", "genai", "platform_audit"]:
+            # Include footer for these tools (normalize both spellings)
+            if req.tool and req.tool.lower() in ["architecture", "genai", "platform audit", "platform_audit"]:
                 yield FOOTER
         except Exception as e:
             import traceback
