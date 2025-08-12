@@ -1,0 +1,56 @@
+### Messaging / Streams (Kafka/MSK, Event Hubs, Pub/Sub, RabbitMQ, NATS) — Pro SRE Hands-On
+
+Symptoms
+- High **consumer lag**, timeouts, throughput drop, rebalances, 5xx in producers/consumers.
+
+Immediate Lag/Health Checks
+- **Kafka (self-hosted/MSK)**
+  - `kafka-consumer-groups.sh --bootstrap-server <broker:9092> --group <group> --describe`
+  - `kafka-topics.sh --bootstrap-server <broker:9092> --describe --topic <topic>`
+  - Broker reachability: `nc -vz <broker> 9092`
+- **Azure Event Hubs**
+  - `az eventhubs eventhub show --namespace-name <ns> --name <hub> --resource-group <rg>`
+  - Metrics in Azure Monitor: IncomingRequests, ServerErrors, ThrottledRequests
+- **GCP Pub/Sub**
+  - `gcloud pubsub subscriptions describe <sub>`
+  - `gcloud pubsub subscriptions pull <sub> --auto-ack --limit=1`
+- **RabbitMQ**
+  - Management API `/api/overview`; `rabbitmq-diagnostics check_running` on node
+- **NATS**
+  - `nats account info` / `nats stream ls` / `nats consumer ls <stream>`
+
+Common Root Causes & Fixes
+- **Consumer too slow / too few consumers**
+  - Scale consumer replicas; ensure each instance has a unique group member ID.
+  - Increase fetch/batch: `fetch.max.bytes`, `max.partition.fetch.bytes`, `batch.size`, `linger.ms`.
+- **Partition pressure / hot keys**
+  - Increase partitions; use a better key to spread load evenly.
+- **Broker/network bottlenecks**
+  - Raise broker socket buffers; verify SG/NSG/firewall allows broker ports (9092/SSL variants).
+  - Ensure NAT/egress bandwidth is not the bottleneck; consider PrivateLink/PE for cloud brokers.
+- **Throttling / quotas**
+  - Check per-namespace/topic quotas (Event Hubs/PubSub); upgrade SKU/throughput units if needed.
+- **Auth / ACLs**
+  - Kafka: verify SCRAM/SASL/OAuth creds; `kafka-acls.sh --list --topic <topic>`
+  - Cloud: ensure client principal has publish/consume IAM perms.
+
+Producer/Consumer Hardening
+- **Producers**
+  - Enable idempotence (`enable.idempotence=true`) to avoid duplicates.
+  - Tune `retries`, `delivery.timeout.ms`, `request.timeout.ms`.
+- **Consumers**
+  - Use cooperative rebalancing where available; set sensible `max.poll.interval.ms`.
+  - Commit offsets after processing; use DLQ for poison messages.
+
+Observability
+- Alert on **consumer lag**, **rebalance rate**, **produce/consume errors**, and **broker errors**.
+- Export metrics to Prometheus/Grafana or native cloud monitoring.
+
+Safety / Ops
+- Increase retention carefully; monitor disk usage.
+- For MSK: check CloudWatch metrics: `BytesIn/Out`, `UnderReplicatedPartitions`, `ActiveControllerCount`.
+- For Pub/Sub/Event Hubs: watch pending messages, throttle counts, expired/abandoned messages.
+
+Verification
+- Run a **canary producer + consumer** on a small topic to isolate infra vs. application issues.
+- Validate end-to-end latency and failure handling before scaling changes across the fleet.
