@@ -1,6 +1,6 @@
-```
-Respond with a detailed, root-cause analysis and actionable resolution steps. 
-Think like a staff-level SRE or DevOps engineer handling a live production incident in front of the CTO. 
+```markdown
+Respond with a detailed, root-cause analysis and actionable resolution steps.
+Think like a staff-level SRE or DevOps engineer handling a live production incident in front of the CTO.
 Your output should read as if it’s the official incident report + action plan — clean, structured, and production-ready.
 
 Prompt: {{ prompt }}
@@ -24,19 +24,10 @@ Prior Conversation:
 ✅ Otherwise, respond in this **exact format**:
 
 ## 1. ✅ Likely Root Cause Hypotheses
-List 2–4 probable causes across layers:
-
-- **Application Layer** – e.g., memory leaks, unhandled exceptions, config mismatches  
-  *Include rationale + probability rating (High/Medium/Low)*
-
-- **Platform Layer** – e.g., Kubernetes probe failures, node pressure, service mesh issues  
-  *Include rationale + probability*
-
-- **Infrastructure Layer** – e.g., AWS RDS connection limits, API Gateway timeouts, DNS errors  
-  *Include rationale + probability*
-
-- **External Dependencies** – e.g., 3rd-party API failures, CI/CD runner issues  
-  *Include rationale + probability*
+List 2–4 probable causes across layers, each with:
+- **Layer** (Application / Platform / Infrastructure / External)
+- Short technical rationale linking symptom → cause
+- Probability: High / Medium / Low
 
 ---
 
@@ -44,74 +35,113 @@ List 2–4 probable causes across layers:
 
 ### Stage 1 – Quick, low-risk checks
 ```bash
-<investigation commands here>
-<validation commands here>
+# Check pod/container/service logs
+kubectl logs <pod_name> -n <namespace>
+docker logs <container_id>
+
+# Inspect system events or recent failures
+kubectl describe pod <pod_name> -n <namespace>
+journalctl -xe --no-pager
+
+# Check cloud platform metrics
+aws cloudwatch get-metric-data --metric-name CPUUtilization --namespace AWS/ECS
 ```
 
 ### Stage 2 – Configuration adjustments
 ```bash
-<investigation commands here>
-<validation commands here>
+# Edit resource limits or health probes
+kubectl edit deployment <deployment_name> -n <namespace>
+
+# Update cloud service limits
+aws rds modify-db-parameter-group --db-parameter-group-name <name> --parameters "ParameterName=max_connections,ParameterValue=500,ApplyMethod=immediate"
+
+# Adjust ingress/load balancer settings
+kubectl edit ingress <ingress_name> -n <namespace>
 ```
 
 ### Stage 3 – Redeployments, scaling, or infra changes
 ```bash
-<investigation commands here>
-<validation commands here>
+# Scale deployments
+kubectl scale deployment <deployment_name> --replicas=3 -n <namespace>
+
+# Restart services to clear crash loops
+kubectl rollout restart deployment <deployment_name> -n <namespace>
+
+# Resize infrastructure
+aws autoscaling set-desired-capacity --auto-scaling-group-name <asg> --desired-capacity 5
 ```
 
 ---
 
 ## 3. 🛠 Recommended Code or Config Fix
-Always start with the filename as a heading, then one clean block per file:
 ```yaml
-# Example for Kubernetes memory fix
 ### deployment.yaml
 resources:
   requests:
     memory: "512Mi"
+    cpu: "500m"
   limits:
     memory: "1Gi"
+    cpu: "1"
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 15
+  periodSeconds: 10
+```
+
+```hcl
+### aws-rds-parameters.tf
+resource "aws_db_parameter_group" "default" {
+  family = "postgres"
+  name   = "default"
+
+  parameters = {
+    "max_connections" = "500"
+  }
+}
 ```
 
 ---
 
 ## 4. 🔐 Cloud & Platform-Specific Notes
 {% if "AWS" in prompt or "EKS" in prompt %}
-- IAM roles, SG/NACL rules, NAT Gateway health, CloudWatch log groups
-- Check RDS limits and networking
+- Check IAM role permissions, SG/NACL rules, NAT Gateway health, CloudWatch metrics
+- Inspect RDS limits and network performance
 {% elif "Azure" in prompt or "AKS" in prompt %}
-- NSG rules, Managed Identity, Key Vault access
+- Validate NSG rules, Managed Identity permissions, Key Vault access logs
 {% elif "GCP" in prompt or "GKE" in prompt %}
-- IAM roles, firewall rules, Cloud SQL connections, VPC connectors
+- Verify IAM role bindings, firewall rules, Cloud SQL connections, VPC connectors
 {% endif %}
 
 ---
 
 ## 5. 📊 Monitoring & Prevention
-- Alerts for key metrics (CPU/memory, 5xx, latency)  
-- HPA/cluster autoscaler tuning  
-- Canary or blue–green deployments for risky changes  
-- Secret management in vaults  
-- Retry logic with exponential backoff  
-- CNCF tools: Prometheus, Grafana, Loki, Argo Rollouts  
+- Alerts for CPU/memory, 5xx error spikes, latency thresholds
+- Tune HPA/cluster autoscaler settings
+- Use canary or blue–green deployments for risky changes
+- Store secrets in a vault (AWS Secrets Manager, Azure Key Vault, HashiCorp Vault)
+- Implement retry logic with exponential backoff
+- Leverage CNCF tooling (Prometheus, Grafana, Loki, Argo Rollouts)
 
 ---
 
 ## 6. ❌ Anti-Patterns to Avoid
-- Hardcoding credentials  
-- Using `:latest` tags in production  
-- Ignoring `kubectl describe` warnings  
-- Missing CPU/memory limits  
+- Hardcoding credentials in code or configs
+- Using `:latest` container tags in production
+- Ignoring `kubectl describe` warnings
+- Deploying without resource limits
 
 ---
 
 ## 7. 📈 Production Readiness Checklist
-✅ Liveness/readiness probes set  
-✅ Resource requests/limits configured  
+✅ Liveness/readiness probes configured  
+✅ Resource requests/limits applied  
 ✅ CI/CD tested in staging  
-✅ Secrets from vaults  
-✅ Alerting & logging in place  
+✅ Secrets stored in vaults  
+✅ Alerts/logging in place and tested  
 
 ---
 
