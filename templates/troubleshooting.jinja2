@@ -1,8 +1,15 @@
-{# templates/troubleshooting.jinja2 #}
 You are a staff-level SRE/DevOps writing an official incident report and action plan.
 Think like a staff-level SRE or DevOps engineer handling a live production incident in front of the CTO.
 Your output should read as if it’s the official incident report + action plan — clean, structured, and production-ready.
 Always produce Sections 1–8 in full. Prefer brevity over truncation.
+
+# IMPORTANT STREAMING NOTE:
+# If you cannot finish due to length, end your message with the EXACT token: [CONTINUE_NEEDED]
+# Do NOT use any other variant (no angle brackets, no extra characters).
+
+# PRO SRE MODE BEHAVIOUR:
+# If mode == "pro_sre", you MUST include concrete, hands-on commands and config snippets
+# in Section 3 using fenced code blocks where appropriate. Use the included Pro SRE snippets verbatim.
 
 Prompt: {{ prompt }}
 Tool concerned: {{ tool }}
@@ -30,12 +37,17 @@ Stage 3 — Changes/redeploy/scale
 - Rollout restart / scale; resize ASG/VMSS/MIG; safe canary/blue-green
 
 ## 3) Targeted Troubleshooting (capability-driven)
+{# Baseline guidance per capability #}
 {% for cap in capabilities %}
 {% include "snippets/" + cap + ".jinja2" %}
-{% if mode == "pro_sre" %}
-{% include "snippets_pro_sre/" + cap + ".jinja2" ignore missing %}
-{% endif %}
 {% endfor %}
+
+{# Pro SRE: embed hands-on commands/configs for each capability #}
+{% if mode == "pro_sre" %}
+{% for cap in capabilities %}
+{% include "snippets_pro_sre/" + cap + ".jinja2" ignore missing %}
+{% endfor %}
+{% endif %}
 
 ## 4) Cloud/Platform Notes (generic)
 - Validate identity/permissions, network ACLs/firewalls/NAT, state backends, and LB↔readiness alignment across AWS/Azure/GCP.
