@@ -1,0 +1,17 @@
+**Hands-On Commands**
+- `kubectl describe pod <pod-name> -n <namespace>` → View reason for CrashLoopBackOff.
+- `kubectl logs <pod-name> -n <namespace> --previous` → See last crash logs.
+- `kubectl get events -n <namespace> --sort-by=.metadata.creationTimestamp | tail -20` → Latest events.
+- `kubectl top pod <pod-name> -n <namespace>` → Check CPU/mem pressure.
+- Check probes in deployment YAML:
+```yaml
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 10
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
