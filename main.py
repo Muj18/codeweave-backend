@@ -8,7 +8,7 @@ if not os.getenv("OPENAI_API_KEY"):
     raise RuntimeError("❌ OPENAI_API_KEY not found in .env file")
 
 from fastapi import FastAPI
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import AsyncOpenAI
@@ -186,7 +186,6 @@ SYSTEM_GUARD = (
     "If you cannot finish due to length, end with: [CONTINUE_NEEDED]."
 )
 
-# (Kept for reuse elsewhere, but /generate below will aggregate and return JSON)
 async def stream_paged_completion(model: str, system_guard: str, initial_user_content: str, desired_cap: int):
     temperature = 0.3
     max_pages = 6
@@ -202,7 +201,7 @@ async def stream_paged_completion(model: str, system_guard: str, initial_user_co
         stream = await client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": SYSTEM_GUARD},
+                {"role": "system", "content": system_guard},
                 {"role": "user", "content": current_prompt}
             ],
             temperature=temperature,
@@ -219,6 +218,7 @@ async def stream_paged_completion(model: str, system_guard: str, initial_user_co
         if "[CONTINUE_NEEDED]" in page_buf:
             trimmed = page_buf.replace("[CONTINUE_NEEDED]", "").rstrip()
             if trimmed:
+                yield trimmed
                 full_text += trimmed
             tail = full_text[-3000:]
             current_prompt = (
@@ -234,18 +234,13 @@ async def stream_paged_completion(model: str, system_guard: str, initial_user_co
             continue
         else:
             if page_buf:
+                yield page_buf
                 full_text += page_buf
             break
 
     if is_unresolved(full_text):
         log_unresolved_issue({"task": "platform_audit", "response": full_text})
         email_issue({"task": "platform_audit", "response": full_text})
-
-    return full_text
-
-@app.get("/healthz")
-async def healthz():
-    return JSONResponse({"status": "ok"})
 
 @app.post("/generate")
 async def generate_code(req: PromptRequest):
@@ -255,9 +250,12 @@ async def generate_code(req: PromptRequest):
         context=req.context,
         mode=req.mode or "summary"
     )
-    
+    print("[DEBUG] FIRST_200]\n", rendered_prompt[:200])
+
     model = "gpt-3.5-turbo" if (req.plan or "free").lower() == "free" else "gpt-4o"
     desired_cap = 3000
+
+    print("[DEBUG] PROMPT TOKENS:", count_tokens(model, rendered_prompt))
 
     async def token_stream():
         try:
@@ -267,12 +265,13 @@ async def generate_code(req: PromptRequest):
                 initial_user_content=rendered_prompt,
                 desired_cap=desired_cap,
             ):
-                # ✅ Send actual line breaks, no JSON escaping
                 yield chunk
             if req.tool and req.tool.lower() in ["architecture", "genai", "platform_audit"]:
                 yield FOOTER
         except Exception as e:
+            import traceback
+            print("[DEBUG] Exception in token_stream:", str(e))
+            traceback.print_exc()
             yield f"\n\n[Error]: {str(e)}"
 
-    # ✅ Return as plain text so \n are real
     return StreamingResponse(token_stream(), media_type="text/plain")
