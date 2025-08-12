@@ -67,8 +67,8 @@ except Exception:
 
 def safe_max_tokens(model_name: str, prompt_text: str, desired_cap: int, buffer: int = 200) -> int:
     limit = MODEL_LIMITS.get(model_name, 4096)
-    prompt_tokens = count_tokens(model, rendered_prompt)
-    desired_cap = max(512, MODEL_LIMITS[model] - prompt_tokens - 100)  # always fits
+    prompt_tokens = count_tokens(model_name, prompt_text)
+    remaining = max(256, limit - prompt_tokens - buffer)
     return max(256, min(desired_cap, remaining))
 
 def detect_task_type(prompt: str, tool: str) -> str:
@@ -194,8 +194,9 @@ async def stream_paged_completion(model: str, system_guard: str, initial_user_co
     current_prompt = initial_user_content
 
     while page <= max_pages:
-        max_tokens = safe_max_tokens(model, current_prompt, desired_cap=desired_cap, buffer=100)
-        print(f"[DEBUG] PAGE {page} | MAX_TOKENS {max_tokens} | PROMPT_TOKENS {count_tokens(model, current_prompt)}")
+        prompt_tokens = count_tokens(model, current_prompt)
+        max_tokens = safe_max_tokens(model, current_prompt, desired_cap=desired_cap, buffer=200)
+        print(f"[DEBUG] PAGE {page} | MAX_TOKENS {max_tokens} | PROMPT_TOKENS {prompt_tokens}")
 
         stream = await client.chat.completions.create(
             model=model,
@@ -243,7 +244,6 @@ async def stream_paged_completion(model: str, system_guard: str, initial_user_co
 
 @app.post("/generate")
 async def generate_code(req: PromptRequest):
-    # Force audit template for this test
     rendered_prompt = env.get_template("platform_audit.jinja2").render(
         prompt=req.prompt,
         tool=req.tool,
@@ -253,7 +253,7 @@ async def generate_code(req: PromptRequest):
     print("[DEBUG] FIRST_200]\n", rendered_prompt[:200])
 
     model = "gpt-3.5-turbo" if (req.plan or "free").lower() == "free" else "gpt-4o"
-    desired_cap = 1500
+    desired_cap = 3000
 
     print("[DEBUG] PROMPT TOKENS:", count_tokens(model, rendered_prompt))
 
