@@ -1,14 +1,14 @@
-{# ===== Platform Audit (Concise) ===== #}
+{# ===== Platform Audit (Safe & Concise) ===== #}
 📬 Respond with a **concise, high-impact platform audit** for a CTO board briefing.  
-Be quantified, decisive, and specific to the prompt — avoid generic best practices.  
+Be quantified, decisive, and specific to the prompt — avoid generic filler advice.  
 Output ≤250 words, McKinsey/Bain-style.
 
 Prompt: {{ prompt }}
 Tool: Platform Audit
 {% if context %}Context: {{ context }}{% endif %}
 
-{# Gatekeeping #}
-{% if not flags.skipChecks %}
+{# Gatekeeping - safe default #}
+{% if flags is defined and (not flags.get("skipChecks")) %}
 ❌ Do not proceed unless the prompt contains:
 - Cloud provider(s)
 - Workload type(s)
@@ -37,7 +37,7 @@ If missing, ask 1–2 clarifying questions and stop.
 ## 🧠 Architecture Notes
 - **Over/under-engineering:** Flag and justify.
 - **Scale posture:** Autoscaling, spot/RI mix, region fit.
-- **Delivery:** CI/CD bottlenecks, self-service.
+- **Delivery:** CI/CD bottlenecks, self-service potential.
 - **Kubernetes:** Requests/limits, binpack, scaling configs.
 - **Data/GenAI:** GPU utilisation, RAG/vector DB fit.
 - **Security:** OIDC, least privilege, rotation cadence.
@@ -47,14 +47,14 @@ If missing, ask 1–2 clarifying questions and stop.
 ## 📊 KPI Scorecard
 | Dimension         | /10 | Gap (one-liner)        |
 |-------------------|-----|------------------------|
-| Cost Efficiency   | {{ wa_cost or "TBD" }} | Idle LB, no SP/RI |
-| Security          | {{ wa_security or "TBD" }} | Long-lived keys  |
-| Reliability       | {{ wa_reliability or "TBD" }} | No DR test   |
-| Delivery Velocity | {{ wa_operational or "TBD" }} | Manual gates |
+| Cost Efficiency   | {{ wa_cost|default("TBD") }} | Idle LB, no SP/RI |
+| Security          | {{ wa_security|default("TBD") }} | Long-lived keys  |
+| Reliability       | {{ wa_reliability|default("TBD") }} | No DR test   |
+| Delivery Velocity | {{ wa_operational|default("TBD") }} | Manual gates |
 
 ---
 
-{% if flags.deliveryPlan %}
+{% if flags is defined and flags.get("deliveryPlan") %}
 ## 🗓️ 30-Day Plan
 - **W1:** Assess & map dependencies.
 - **W2:** Rightsize + baseline observability/security.
