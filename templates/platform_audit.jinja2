@@ -46,12 +46,14 @@ If missing, ask 1–2 clarifying questions and stop.
 ---
 
 ## 📊 KPI Scorecard
-| Dimension         | /10 | Gap (one-liner)        |
-|-------------------|-----|------------------------|
-| Cost Efficiency   | {{ wa_cost|default("TBD") }} | Idle LB, no SP/RI |
-| Security          | {{ wa_security|default("TBD") }} | Long-lived keys  |
-| Reliability       | {{ wa_reliability|default("TBD") }} | No DR test   |
-| Delivery Velocity | {{ wa_operational|default("TBD") }} | Manual gates |
+{# Instruct the model to assign realistic scores based on the audit above. #}
+{# Scoring guideline: 1–4 = weak, 5–6 = baseline, 7–8 = good, 9–10 = excellent. #}
+| Dimension         | /10 | Gap (one-liner)                 |
+|-------------------|-----|---------------------------------|
+| Cost Efficiency   | [fill 1–10] | [biggest waste or lever]     |
+| Security          | [fill 1–10] | [highest-risk gap]           |
+| Reliability       | [fill 1–10] | [DR/SLO/SLA weak point]      |
+| Delivery Velocity | [fill 1–10] | [pipeline or flow constraint]|
 
 ---
 
@@ -71,3 +73,4 @@ If missing, ask 1–2 clarifying questions and stop.
 - ✅ Consolidate toolchain; standardise golden paths  
 
 📬 For hands-on execution, contact **support@codeweave.co**.
+
