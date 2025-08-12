@@ -1,3 +1,28 @@
+{# ----------------------------
+  Platform Audit Template
+  For CTO Board Briefing
+  ---------------------------- #}
+
+{# ---- Helper Macro for Currency Formatting ---- #}
+{% macro money(v) -%}
+  {%- if v is number -%}£{{ "{:,.0f}".format(v) }}{%- elif v -%}{{ v }}{%- else -%}—{%- endif -%}
+{%- endmacro %}
+
+{# ---- Normalize Prompt for Guard Checks ---- #}
+{% set _p = (prompt|default('', true))|lower %}
+
+{% set has_provider = 'aws' in _p or 'azure' in _p or 'gcp' in _p %}
+{% set has_workload = 'kubernetes' in _p or 'eks' in _p or 'aks' in _p or 'ec2' in _p or 'vm' in _p or 'rds' in _p or 'sql' in _p %}
+{% set has_modern   = 'kubernetes' in _p or 'eks' in _p or 'aks' in _p or 'ci/cd' in _p or 'github actions' in _p or 'azure devops' in _p or 'gitlab' in _p %}
+
+{# ---- Guard Clause ---- #}
+{% if not (has_provider and has_workload and has_modern) %}
+**Need one detail to proceed:** Please specify:
+- Cloud provider(s)
+- Workload type(s)
+- Mention of Kubernetes, CI/CD, or modern platform tools
+{% else %}
+
 Respond with a **concise, high-impact platform audit** for a CTO board briefing.  
 Be quantified, decisive, and specific to the prompt — avoid generic best practices.
 
@@ -9,55 +34,73 @@ Prior Conversation:
 {{ context }}
 {% endif %}
 
-❌ Do not proceed unless prompt includes:
-- Cloud provider(s)
-- Workload type(s)
-- Mention of Kubernetes, CI/CD, or modern platform tools
-
-If missing, ask 1 clarifying question and stop.
-
 ---
 
 ## 🚀 90-Day ROI Summary
-- **Cost Savings:** e.g., Rightsize EKS nodes (£XXk/year)
-- **Performance:** e.g., Reduce API P99 latency by XX%
-- **Risk:** Close [specific security/compliance gap]
+- **Cost Savings:** {{ cost_savings_note|default('Rightsize EKS/AKS node groups, optimise storage tiers, and reduce NAT costs') }} to save {{ money(cost_savings_amount)|default('—') }}{% if cost_savings_pct %} ({{ cost_savings_pct }}%){% endif %}.
+- **Performance:** {{ performance_note|default('Reduce environment provisioning time by 30–50% via autoscaling tuning and pipeline parallelisation.') }}
+- **Risk:** {{ risk_note|default('Close high-severity IAM/network findings by implementing short-lived credentials, least-privilege roles, and WAF rules.') }}
 
 ---
 
 ## 📈 Quick Wins (0–90 Days)
-1. Action + £ or % impact  
-2. Action + £ or % impact  
-3. Action + £ or % impact  
+1. **EKS/AKS Node Optimisation** – Convert underutilised On-Demand nodes to Spot for non-critical workloads.  
+   *Owner:* Infra Team | *Effort:* M | *Impact:* {{ money(qw1_savings)|default('—') }}/year
+2. **NAT Gateway/Data Transfer Reduction** – Consolidate NAT usage per AZ and optimise routing.  
+   *Owner:* SRE Team | *Effort:* S | *Impact:* {{ money(qw2_savings)|default('—') }}/year
+3. **IAM Hygiene Automation** – Implement automated key rotation and unused role removal.  
+   *Owner:* Security Team | *Effort:* M | *Impact:* {{ qw3_impact|default('Reduce audit findings by 40%+') }}
+4. **CI/CD Pipeline Efficiency** – Parallelise builds/tests to cut deployment time by {{ qw4_pct|default('30%') }}.  
+   *Owner:* DevOps Team | *Effort:* S | *Impact:* Faster releases
+5. **Storage Lifecycle Policies** – Apply tiering to S3/Blob storage and logs older than N days.  
+   *Owner:* Infra Team | *Effort:* S | *Impact:* {{ money(qw5_savings)|default('—') }}/year
 
 ---
 
 ## 🧠 Strategic Notes
-- Flag overengineering or tech debt hotspots.
-- Recommend scale/SLO-justified upgrades only.
+- {{ strategic1|default('Avoid overengineering with unnecessary multi-region or service mesh unless justified by SLAs/SLOs.') }}
+- {{ strategic2|default('Standardise Kubernetes management between AWS and Azure to reduce cost and operational overhead.') }}
+- {{ strategic3|default('Reduce security debt in parallel with cost optimisation.') }}
 
 ---
 
 ## ☁️ Platform Review
-**Cloud/Infra:** Over/under-provisioning, region fit.  
-**DevOps:** Pipeline efficiency, automation, self-service.  
-**Kubernetes:** Node/pod utilisation, ingress, scaling.  
-**Security:** IAM scope, secret rotation, zero trust.
+**Cloud/Infra:**  
+- Average compute utilisation: {{ compute_util|default('—') }} (Target: 60–70%)  
+- NAT/data transfer costs: {{ money(nat_cost_month)|default('—') }}/month (Target: ≤{{ money(nat_cost_target)|default('—') }}/month)  
+- Unused storage ratio: {{ unused_storage_pct|default('—') }}
+
+**DevOps & Delivery:**  
+- Avg pipeline runtime: {{ pipeline_runtime|default('—') }} (Target: ≤{{ pipeline_target|default('—') }})  
+- Deployments automated: {{ deploy_auto_pct|default('—') }} (Target: 90%+)
+
+**Kubernetes:**  
+- Pod CPU request over-allocation: {{ pod_overalloc_pct|default('—') }}  
+- Cluster autoscaler churn: {{ ca_events_week|default('—') }}/week (Target: ≤{{ ca_target_week|default('—') }}/week)
+
+**Security:**  
+- IAM roles with admin privileges: {{ admin_roles|default('—') }} (Target: ≤{{ admin_roles_target|default('—') }})  
+- Long-lived IAM keys: {{ long_lived_keys|default('—') }} (Target: 0)
 
 ---
 
 ## 📊 KPI Scorecard
-| Dimension       | /10  | Gap Example         |
-|-----------------|------|--------------------|
-| Cost Efficiency | TBD  | Idle LB, no SP     |
-| Security        | TBD  | Long-lived keys    |
-| Reliability     | TBD  | No DR test         |
+| Dimension         | Score/10 | Notable Gap Example                  |
+|-------------------|----------|---------------------------------------|
+| Cost Efficiency   | {{ kpi_cost|default('—') }} | {{ kpi_cost_gap|default('Over-provisioned compute & storage') }} |
+| Security          | {{ kpi_sec|default('—') }}  | {{ kpi_sec_gap|default('Long-lived IAM keys') }} |
+| Reliability       | {{ kpi_rel|default('—') }}  | {{ kpi_rel_gap|default('No DR test for key workloads') }} |
+| Delivery Velocity | {{ kpi_dev|default('—') }}  | {{ kpi_dev_gap|default('Manual approvals in CI/CD pipeline') }} |
 
 ---
 
 ## 💡 Next Steps
-- ✅ Cut £X/year infra waste  
-- ✅ Deploy OIDC secrets rotation  
-- ✅ Consolidate CNCF toolchain
+- ✅ Implement EKS/AKS Spot adoption plan  
+- ✅ Consolidate NAT usage per AZ  
+- ✅ Automate IAM key rotation and role review  
+- ✅ Reduce K8s over-provisioning in requests/limits  
+- ✅ Apply S3/Blob lifecycle policies
 
-📬 Contact **support@codeweave.co** for delivery with <48h targeted implementation.
+📬 For full implementation support and validation against real billing/performance data, contact **support@codeweave.co**.
+
+{% endif %}
