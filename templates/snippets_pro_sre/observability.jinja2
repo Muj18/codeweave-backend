@@ -1,0 +1,17 @@
+### Observability (Metrics/Logs/Traces) — Pro SRE Hands-On
+
+Prometheus / Metrics
+- curl -s http://<prometheus>/api/v1/query?query=up    # quick sanity
+- For pod CPU: rate(container_cpu_usage_seconds_total[5m])
+- If kubectl top is missing, (re)install metrics-server and check RBAC.
+
+Grafana / Dashboards
+- Verify dashboards for: RPS, p95/p99 latency, error rate, restarts, DB connections, consumer lag.
+- Ensure panel queries and data sources are healthy; check alert rules firing as expected.
+
+Tracing / APM
+- Ensure stable service names, critical spans, and reasonable sampling.
+- Trace a failing request end-to-end to see the slowest/errored component.
+
+Runbooks
+- Link dashboards and incident runbooks directly in the report for fast follow-up.
