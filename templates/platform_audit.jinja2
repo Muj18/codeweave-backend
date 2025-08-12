@@ -1,5 +1,5 @@
-Respond with a **concise, high-impact platform audit** in the style of a McKinsey/Bain engagement summary — designed for a CTO briefing a board.  
-Be decisive, quantified, and tailored to the prompt. Avoid generic "best practices."
+Respond with a **concise, high-impact platform audit** for a CTO board briefing.  
+Be quantified, decisive, and specific to the prompt — avoid generic best practices.
 
 Prompt: {{ prompt }}
 Tool concerned: Platform Audit
@@ -9,121 +9,55 @@ Prior Conversation:
 {{ context }}
 {% endif %}
 
-❌ Do not proceed unless the prompt contains:
+❌ Do not proceed unless prompt includes:
 - Cloud provider(s)
 - Workload type(s)
-- Team size or ops scope
 - Mention of Kubernetes, CI/CD, or modern platform tools
 
-If missing, ask 1–2 clarifying questions and stop.
+If missing, ask 1 clarifying question and stop.
 
 ---
 
-{# ================= PHASE 1 — CxO AUDIT CORE ================= #}
-## 🚀 Executive Summary — 90-Day ROI Path
-- **Immediate Savings:** Quantify top 2–3 cost reductions (e.g., “Rightsize EKS nodes: £65k/year”).
-- **Performance Lift:** Measurable gain (e.g., “Reduce API P99 latency by 40%”).
-- **Risk Reduction:** Security/compliance gap closed.
+## 🚀 90-Day ROI Summary
+- **Cost Savings:** e.g., Rightsize EKS nodes (£XXk/year)
+- **Performance:** e.g., Reduce API P99 latency by XX%
+- **Risk:** Close [specific security/compliance gap]
 
 ---
 
 ## 📈 Quick Wins (0–90 Days)
-- 3–5 ROI-backed actions to recover cost or accelerate delivery.
-- Include £ or % impact where possible.
+1. Action + £ or % impact  
+2. Action + £ or % impact  
+3. Action + £ or % impact  
 
 ---
 
-## 🧠 Strategic Architecture Notes
-- Recommend service mesh, multi-region, or advanced K8s patterns only if scale/SLOs justify.
-- Flag *overengineering* patterns.
+## 🧠 Strategic Notes
+- Flag overengineering or tech debt hotspots.
+- Recommend scale/SLO-justified upgrades only.
 
 ---
 
 ## ☁️ Platform Review
-**Cloud & Infra:** Over/under-provisioning, region fit, cost per workload.  
-**DevOps & Delivery:** Pipeline efficiency, automation, developer self-service.  
-**Kubernetes:** Node/pod efficiency, ingress, scaling configs.  
-**GenAI/MLOps:** GPU utilisation, RAG pipeline fit, vector DB sprawl.  
-**Security/IAM:** Access scope, secret rotation, zero-trust posture.
+**Cloud/Infra:** Over/under-provisioning, region fit.  
+**DevOps:** Pipeline efficiency, automation, self-service.  
+**Kubernetes:** Node/pod utilisation, ingress, scaling.  
+**Security:** IAM scope, secret rotation, zero trust.
 
 ---
 
 ## 📊 KPI Scorecard
-| Dimension         | Score/10 | Notable Gaps |
-|-------------------|----------|--------------|
-| Cost Efficiency   | {{ wa_cost or "TBD" }} | e.g., Idle LB, no SP |
-| Security          | {{ wa_security or "TBD" }} | e.g., Long-lived keys |
-| Reliability       | {{ wa_reliability or "TBD" }} | e.g., No DR test |
-| Delivery Velocity | {{ wa_operational or "TBD" }} | e.g., Manual approvals |
-
----
-
-{# ================= PHASE 2 — OPTIONAL 30-DAY DELIVERY PLAN ================= #}
-{% if flags.deliveryPlan %}
-## 🗓️ 30-Day Delivery Plan (Week-by-Week)
-
-**Week 1 – Discovery & Planning**
-- Platform assessment, application analysis, architecture review, dependency mapping.
-- Define success criteria and 3-week implementation plan.
-
-**Week 2 – Foundation & Build**
-- Containerise target workload and run initial tests.
-- Implement observability, logging, and baseline security controls.
-- Deliver team enablement sessions.
-
-**Week 3 – Production Ready**
-- Provision environment, implement CI/CD automation.
-- Perform integration/performance testing, finalise runbooks.
-
-**Week 4 – Deploy & Sustain**
-- Production go-live with monitoring in place.
-- Team handover and knowledge transfer.
-- Expansion roadmap for next 3–5 workloads.
-{% endif %}
-
----
-
-{# ================= PHASE 3 — OPTIONAL DELIVERABLES & SUPPORT ================= #}
-{% if flags.deliverables %}
-## 📦 Tangible Deliverables
-- **Containerised production workload**
-- **CI/CD pipeline** (build, test, deploy)
-- **Observability & logging stack**
-- **Security baseline** (IAM, secrets, policies)
-- **Runbooks & documentation** for operations
-
-## 🧑‍🏫 Team Enablement
-- Hands-on training using your workloads
-- Daily/weekly knowledge transfer sessions
-- Troubleshooting skills for real incidents
-
-## 🤝 Ongoing Support Packages
-**Platform Essentials – £5k/month**
-- Weekly office hours (Q&A)
-- Monthly architecture reviews
-- Priority Slack/email support
-- Quarterly workshops
-
-**Success Accelerator – £8k/month**
-- Everything in Essentials
-- +4 dedicated engineer days/month
-- Proactive optimisation & security updates
-- Next workload assessments
-
-**Transformation Partner – £15k/month**
-- Everything in Accelerator
-- +8 dedicated engineer days/month
-- Complex migrations
-- Platform evolution & CNCF tooling upgrades
-{% endif %}
+| Dimension       | /10  | Gap Example         |
+|-----------------|------|--------------------|
+| Cost Efficiency | TBD  | Idle LB, no SP     |
+| Security        | TBD  | Long-lived keys    |
+| Reliability     | TBD  | No DR test         |
 
 ---
 
 ## 💡 Next Steps
-- ✅ Cut £X/year infra waste via rightsizing & LB consolidation  
-- ✅ Deploy secrets rotation with OIDC to remove long-lived keys  
-- ✅ Consolidate CNCF toolchain for ops simplicity  
+- ✅ Cut £X/year infra waste  
+- ✅ Deploy OIDC secrets rotation  
+- ✅ Consolidate CNCF toolchain
 
----
-
-📬 For a full hands-on delivery engagement, contact **support@codeweave.co** — delivery includes execution of the above roadmap with CodeWeave’s automation capabilities for <48h implementation of targeted actions.
+📬 Contact **support@codeweave.co** for delivery with <48h targeted implementation.
