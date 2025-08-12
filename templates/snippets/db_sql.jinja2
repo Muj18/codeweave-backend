@@ -1,0 +1,5 @@
+### Database (SQL)
+- Symptoms: “too many clients”, connection timeouts, spike in `DatabaseConnections`.
+- Actions: enable/verify pooling (pgBouncer/ProxySQL); set pool sizes per replica.
+- ORM: limit max connections, set timeouts, retries with backoff+jitter.
+- Param hints: derive `max_connections` from instance class; monitor `FreeableMemory`.
