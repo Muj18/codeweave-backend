@@ -1,0 +1,27 @@
+### Database (SQL: Postgres/MySQL/etc.) — Pro SRE Hands-On
+
+Symptoms
+- Errors like: “too many clients already”, connect timeouts, spikes in DatabaseConnections.
+
+Immediate Triage
+- psql -h <host> -U <user> -d <db> -c "SELECT count(*) FROM pg_stat_activity;"
+- psql -h <host> -U <user> -d <db> -c "SELECT state, count(*) FROM pg_stat_activity GROUP BY state;"
+- psql -h <host> -U <user> -d <db> -c "SHOW max_connections;"
+
+Connection Pooling
+- Use pgBouncer (transaction pooling) or ProxySQL (for MySQL).
+- Example pgBouncer snippet (ini):
+[databases]
+appdb = host=<db_host> dbname=<db_name> pool_size=50
+
+App/ORM Hygiene
+- Set max pool size per replica (e.g., 10–20), connection timeout, and exponential backoff + jitter.
+- Ensure idle connection cleanup; avoid unbounded pool growth.
+
+Parameter & Instance Sizing (Postgres)
+- Derive max_connections from instance class and memory; don’t overcommit.
+- Watch FreeableMemory and CPU; scale up only if pooling + query fixes aren’t enough.
+
+Networking
+- Security groups/firewalls allow app→DB on correct port.
+- Verify DNS, TLS, and route/NAT health for private DBs.
