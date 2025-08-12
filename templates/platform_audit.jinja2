@@ -6,7 +6,7 @@
 {% macro money(v) -%}{%- if v is number -%}£{{ "{:,.0f}".format(v) }}{%- elif v -%}{{ v }}{%- else -%}—{%- endif -%}{%- endmacro %}
 
 {% if not (has_provider and has_workload and has_modern) %}
-**Need one detail to proceed:** Please specify cloud provider(s), workload type(s), and mention Kubernetes, CI/CD, or a modern platform tool.
+**Additional details required:** Please specify cloud provider(s), workload type(s), and mention Kubernetes, CI/CD, or a modern platform tool.
 {% else %}
 
 Respond with a **concise, high-impact platform audit** for a CTO board briefing.  
@@ -20,42 +20,62 @@ Prior Conversation:
 {{ context }}
 {% endif %}
 
-## 🚀 90-Day ROI Summary
-- **Cost Savings:** {{ cost_savings_note|default('Rightsize EKS/AKS, storage tiering, and NAT consolidation') }} to save {{ money(cost_savings_amount)|default('—') }}{% if cost_savings_pct %} ({{ cost_savings_pct }}%){% endif %}.
-- **Performance:** {{ performance_note|default('Cut provisioning time by 30–50% via autoscaling tuning and pipeline parallelisation.') }}
-- **Risk:** {{ risk_note|default('Close high-severity IAM/network findings with short-lived creds, least-privilege roles, and WAF baselines.') }}
+---
 
-## 📈 Quick Wins (0–90 Days)
-1) EKS/AKS Node Optimisation — Impact: {{ money(qw1_savings)|default('—') }}/yr  
-2) NAT/Data Transfer Reduction — Impact: {{ money(qw2_savings)|default('—') }}/yr  
-3) IAM Hygiene Automation — Impact: {{ qw3_impact|default('Reduce audit findings by 40%+') }}  
-4) CI/CD Efficiency — Impact: {{ qw4_impact|default('Cut lead time by 30%') }}  
-5) Storage Lifecycle Policies — Impact: {{ money(qw5_savings)|default('—') }}/yr
+## 📊 90-Day ROI Forecast
+- **Cost Savings:** {{ cost_savings_note|default("Rightsize compute, optimise storage tiers, and reduce NAT costs") }} → **{{ money(cost_savings_amount)|default("—") }}**{% if cost_savings_pct %} ({{ cost_savings_pct }}%){% endif %} annual reduction.
+- **Performance Gains:** {{ performance_note|default("Cut provisioning times by 30–50% via autoscaling tuning and pipeline parallelisation.") }}
+- **Risk Reduction:** {{ risk_note|default("Close high-severity IAM/network gaps with short-lived credentials, least-privilege roles, and unified compliance scanning.") }}
 
-## 🧠 Strategic Notes
-- {{ strategic1|default('Avoid overengineering unless tied to SLOs & revenue risk.') }}
-- {{ strategic2|default('Standardise Kubernetes governance across clouds; reduce tool sprawl.') }}
-- {{ strategic3|default('Pay down security debt in parallel with FinOps work.') }}
+---
 
-## ☁️ Platform Review
-**Cloud/Infra:** Utilisation {{ compute_util|default('—') }}, NAT {{ money(nat_cost_month)|default('—') }}/mo (Target ≤ {{ money(nat_cost_target)|default('—') }}/mo), Unused storage {{ unused_storage_pct|default('—') }}  
-**DevOps:** Pipeline runtime {{ pipeline_runtime|default('—') }} (Target {{ pipeline_target|default('—') }}), Automation {{ deploy_auto_pct|default('—') }}  
-**Kubernetes:** Pod over-allocation {{ pod_overalloc_pct|default('—') }}, Autoscaler churn {{ ca_events_week|default('—') }}/wk (Target ≤ {{ ca_target_week|default('—') }}/wk)  
-**Security:** Admin roles {{ admin_roles|default('—') }} (Target ≤ {{ admin_roles_target|default('—') }}), Long-lived keys {{ long_lived_keys|default('—') }}
+## 🎯 Quick Wins (0–90 Days)
+| Priority | Action | Owner | Effort | Impact |
+|----------|--------|-------|--------|--------|
+| 1 | EKS/AKS node optimisation | Infra | M | {{ money(qw1_savings)|default("—") }}/yr |
+| 2 | NAT/data transfer reduction | SRE | S | {{ money(qw2_savings)|default("—") }}/yr |
+| 3 | IAM hygiene automation | Security | M | {{ qw3_impact|default("Reduce audit findings by 40%+") }} |
+| 4 | CI/CD pipeline optimisation | DevOps | S | {{ qw4_impact|default("Cut deployment time by 30%") }} |
+| 5 | Storage lifecycle policies | Infra | S | {{ money(qw5_savings)|default("—") }}/yr |
 
-## 📊 KPI Scorecard
-| Dimension | Score/10 | Gap |
-|---|---:|---|
-| Cost Efficiency | {{ kpi_cost|default('—') }} | {{ kpi_cost_gap|default('Over-provisioned compute & storage') }} |
-| Security | {{ kpi_sec|default('—') }} | {{ kpi_sec_gap|default('Long-lived IAM keys') }} |
-| Reliability | {{ kpi_rel|default('—') }} | {{ kpi_rel_gap|default('No DR test for key workloads') }} |
-| Delivery Velocity | {{ kpi_dev|default('—') }} | {{ kpi_dev_gap|default('Manual approvals in CI/CD') }} |
+---
 
-## 💡 Next Steps
-- EKS/AKS Spot adoption  
-- Consolidate NAT per AZ  
-- Automate IAM key rotation & role review  
-- Reduce K8s over-provisioning  
-- Apply S3/Blob lifecycle policies
+## 🧠 Strategic Recommendations
+1. {{ strategic1|default("Standardise Kubernetes governance across AWS & Azure to cut cost and complexity.") }}
+2. {{ strategic2|default("Streamline observability tooling; consolidate to 1–2 platforms.") }}
+3. {{ strategic3|default("Introduce automated compliance checks into CI/CD pipelines.") }}
+4. {{ strategic4|default("Prioritise cost-per-feature analysis before adopting new CNCF tools.") }}
+
+---
+
+## ☁️ Platform Health Overview
+**Cloud & Infra:** Utilisation: {{ compute_util|default("—") }} (Target: 60–70%), NAT: {{ money(nat_cost_month)|default("—") }}/mo (Target: ≤{{ money(nat_cost_target)|default("—") }}/mo), Unused storage: {{ unused_storage_pct|default("—") }}  
+**DevOps:** Pipeline runtime: {{ pipeline_runtime|default("—") }} (Target: {{ pipeline_target|default("—") }}), Automation: {{ deploy_auto_pct|default("—") }}  
+**Kubernetes:** Pod over-allocation: {{ pod_overalloc_pct|default("—") }}, Autoscaler churn: {{ ca_events_week|default("—") }}/wk (Target: ≤{{ ca_target_week|default("—") }}/wk)  
+**Security:** Admin roles: {{ admin_roles|default("—") }} (Target: ≤{{ admin_roles_target|default("—") }}), Long-lived keys: {{ long_lived_keys|default("—") }}
+
+---
+
+## 📈 KPI Scorecard
+| Dimension | Score/10 | Gap Example |
+|-----------|----------|-------------|
+| Cost Efficiency | {{ kpi_cost|default("—") }} | {{ kpi_cost_gap|default("Over-provisioned compute & storage") }} |
+| Security | {{ kpi_sec|default("—") }} | {{ kpi_sec_gap|default("Long-lived IAM keys") }} |
+| Reliability | {{ kpi_rel|default("—") }} | {{ kpi_rel_gap|default("No DR test for key workloads") }} |
+| Delivery Velocity | {{ kpi_dev|default("—") }} | {{ kpi_dev_gap|default("Manual approvals in CI/CD pipeline") }} |
+
+---
+
+## ✅ Next Steps
+1. Implement Spot adoption plan for non-prod clusters.  
+2. Consolidate NAT gateways per AZ and review routing.  
+3. Enforce IAM key rotation and remove unused roles.  
+4. Reduce Kubernetes over-provisioning.  
+5. Apply S3/Blob lifecycle policies.
+
+---
+
+📬 **For implementation and validation against live billing/performance data, contact:**  
+**support@codeweave.co**
 
 {% endif %}
