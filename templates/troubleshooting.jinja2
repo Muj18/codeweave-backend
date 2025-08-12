@@ -15,7 +15,7 @@ Prior Conversation:
 ❌ Do not proceed unless the prompt clearly includes:
 - Symptom or failure mode (what is broken?)
 - Severity (prod outage, staging issue, CI/CD break?)
-- At least some environment hints (K8s, AWS, Azure, GCP, etc.)
+- At least some environment hints (K8s, AWS, Azure, GCP, Terraform, Docker, Monitoring tools, etc.)
 
 ✅ If unclear, ask 1–2 focused clarifying questions — then stop.
 
@@ -35,40 +35,56 @@ List 2–4 probable causes across layers, each with:
 
 ### Stage 1 – Quick, low-risk checks
 ```bash
-# Check pod/container/service logs
+# Kubernetes / Docker logs
 kubectl logs <pod_name> -n <namespace>
 docker logs <container_id>
 
-# Inspect system events or recent failures
+# Resource & event checks
 kubectl describe pod <pod_name> -n <namespace>
+kubectl top pod -n <namespace>
 journalctl -xe --no-pager
 
-# Check cloud platform metrics
+# Terraform state/lock issues
+terraform plan
+terraform force-unlock <LOCK_ID>
+
+# Cloud platform quick checks
 aws cloudwatch get-metric-data --metric-name CPUUtilization --namespace AWS/ECS
+az monitor metrics list --resource <resource_id>
+gcloud monitoring time-series list --filter='metric.type="compute.googleapis.com/instance/cpu/utilization"'
+
+# Monitoring tools (Prometheus / Grafana)
+curl -s http://<prometheus_url>/api/v1/query?query=up
 ```
 
 ### Stage 2 – Configuration adjustments
 ```bash
-# Edit resource limits or health probes
+# Adjust resource requests/limits or health probes
 kubectl edit deployment <deployment_name> -n <namespace>
 
-# Update cloud service limits
-aws rds modify-db-parameter-group --db-parameter-group-name <name> --parameters "ParameterName=max_connections,ParameterValue=500,ApplyMethod=immediate"
+# Terraform backend config fix
+terraform init -backend-config=backend.hcl
 
-# Adjust ingress/load balancer settings
+# Update cloud service parameters
+aws rds modify-db-parameter-group --db-parameter-group-name <name> \
+  --parameters "ParameterName=max_connections,ParameterValue=500,ApplyMethod=immediate"
+
+# Adjust load balancer / ingress configs
 kubectl edit ingress <ingress_name> -n <namespace>
 ```
 
 ### Stage 3 – Redeployments, scaling, or infra changes
 ```bash
-# Scale deployments
+# Kubernetes scaling
 kubectl scale deployment <deployment_name> --replicas=3 -n <namespace>
 
-# Restart services to clear crash loops
+# Restart services
 kubectl rollout restart deployment <deployment_name> -n <namespace>
 
-# Resize infrastructure
+# Infra scaling
 aws autoscaling set-desired-capacity --auto-scaling-group-name <asg> --desired-capacity 5
+az vmss scale --name <scale_set> --new-capacity 5
+gcloud compute instance-groups managed resize <group> --size=5
 ```
 
 ---
@@ -104,16 +120,28 @@ resource "aws_db_parameter_group" "default" {
 }
 ```
 
+```hcl
+### backend.hcl (Terraform backend settings)
+bucket         = "my-terraform-state-bucket"
+key            = "envs/prod/terraform.tfstate"
+region         = "us-east-1"
+dynamodb_table = "terraform-lock-table"
+encrypt        = true
+```
+
 ---
 
 ## 4. 🔐 Cloud & Platform-Specific Notes
 {% if "AWS" in prompt or "EKS" in prompt %}
 - Check IAM role permissions, SG/NACL rules, NAT Gateway health, CloudWatch metrics
 - Inspect RDS limits and network performance
+- Verify S3 + DynamoDB state locking for Terraform
 {% elif "Azure" in prompt or "AKS" in prompt %}
 - Validate NSG rules, Managed Identity permissions, Key Vault access logs
+- Review Storage Account + Cosmos DB (Terraform state) configuration
 {% elif "GCP" in prompt or "GKE" in prompt %}
 - Verify IAM role bindings, firewall rules, Cloud SQL connections, VPC connectors
+- Check GCS + Firestore state backend settings
 {% endif %}
 
 ---
@@ -125,6 +153,7 @@ resource "aws_db_parameter_group" "default" {
 - Store secrets in a vault (AWS Secrets Manager, Azure Key Vault, HashiCorp Vault)
 - Implement retry logic with exponential backoff
 - Leverage CNCF tooling (Prometheus, Grafana, Loki, Argo Rollouts)
+- CI/CD concurrency control to avoid Terraform state collisions
 
 ---
 
@@ -133,6 +162,7 @@ resource "aws_db_parameter_group" "default" {
 - Using `:latest` container tags in production
 - Ignoring `kubectl describe` warnings
 - Deploying without resource limits
+- Deleting Terraform state locks without checking for active runs
 
 ---
 
@@ -142,9 +172,10 @@ resource "aws_db_parameter_group" "default" {
 ✅ CI/CD tested in staging  
 ✅ Secrets stored in vaults  
 ✅ Alerts/logging in place and tested  
+✅ Terraform backend secured & versioned  
 
 ---
 
 ## 8. 🧠 Final Thoughts
-> “This is how a senior DevOps engineer would handle this situation in a live production environment.”
+> “This is how a senior DevOps engineer would handle this situation in a live production environment — combining structured investigation, safe remediation, and preventive hardening.”
 ```
