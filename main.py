@@ -266,14 +266,19 @@ async def stream_paged_completion(model: str, system_guard: str, initial_user_co
                 page_buf = page_buf[:second].rstrip()
                 print("[DEBUG] Trimmed repeated Executive Snapshot block within page.")
 
-        # ✅ Yield clean page
-        yield page_buf
-        full_text += page_buf
+        # ✅ Trim marker if present, then yield
+        if "[CONTINUE_NEEDED]" in page_buf:
+            trimmed = page_buf.replace("[CONTINUE_NEEDED]", "").rstrip()
+            yield trimmed
+            full_text += trimmed
+        else:
+            yield page_buf
+            full_text += page_buf
 
         # Continue only if explicitly requested
         if "[CONTINUE_NEEDED]" not in page_buf:
-            print("[DEBUG] No CONTINUE_NEEDED marker; stopping after this page.")
-            break
+         print("[DEBUG] No CONTINUE_NEEDED marker; stopping after this page.")
+         break
 
         tail = full_text[-3000:]
         current_prompt = (
