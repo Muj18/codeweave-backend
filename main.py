@@ -245,10 +245,11 @@ async def stream_paged_completion(model: str, system_guard: str, initial_user_co
             page += 1
             continue
         else:
-            if page_buf:
+            if page_buf and page_buf.strip() not in full_text.strip():
                 yield page_buf
                 full_text += page_buf
-            break
+            else:
+                break
 
     if is_unresolved(full_text):
         log_unresolved_issue({"task": "platform_audit", "response": full_text})
