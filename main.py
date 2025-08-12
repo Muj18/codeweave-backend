@@ -8,7 +8,7 @@ if not os.getenv("OPENAI_API_KEY"):
     raise RuntimeError("❌ OPENAI_API_KEY not found in .env file")
 
 from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import AsyncOpenAI
@@ -186,6 +186,7 @@ SYSTEM_GUARD = (
     "If you cannot finish due to length, end with: [CONTINUE_NEEDED]."
 )
 
+# (Kept for reuse elsewhere, but /generate below will aggregate and return JSON)
 async def stream_paged_completion(model: str, system_guard: str, initial_user_content: str, desired_cap: int):
     temperature = 0.3
     max_pages = 6
@@ -201,7 +202,7 @@ async def stream_paged_completion(model: str, system_guard: str, initial_user_co
         stream = await client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": system_guard},
+                {"role": "system", "content": SYSTEM_GUARD},
                 {"role": "user", "content": current_prompt}
             ],
             temperature=temperature,
@@ -218,7 +219,6 @@ async def stream_paged_completion(model: str, system_guard: str, initial_user_co
         if "[CONTINUE_NEEDED]" in page_buf:
             trimmed = page_buf.replace("[CONTINUE_NEEDED]", "").rstrip()
             if trimmed:
-                yield trimmed
                 full_text += trimmed
             tail = full_text[-3000:]
             current_prompt = (
@@ -234,7 +234,6 @@ async def stream_paged_completion(model: str, system_guard: str, initial_user_co
             continue
         else:
             if page_buf:
-                yield page_buf
                 full_text += page_buf
             break
 
@@ -242,36 +241,51 @@ async def stream_paged_completion(model: str, system_guard: str, initial_user_co
         log_unresolved_issue({"task": "platform_audit", "response": full_text})
         email_issue({"task": "platform_audit", "response": full_text})
 
+    return full_text
+
+@app.get("/healthz")
+async def healthz():
+    return JSONResponse({"status": "ok"})
+
 @app.post("/generate")
 async def generate_code(req: PromptRequest):
-    rendered_prompt = env.get_template("platform_audit.jinja2").render(
-        prompt=req.prompt,
-        tool=req.tool,
-        context=req.context,
-        mode=req.mode or "summary"
-    )
-    print("[DEBUG] FIRST_200]\n", rendered_prompt[:200])
+    try:
+        # Render the right template
+        rendered_prompt = env.get_template("platform_audit.jinja2").render(
+            prompt=req.prompt,
+            tool=req.tool,
+            context=req.context,
+            mode=req.mode or "summary"
+        )
+        print("[DEBUG] FIRST_200]\n", rendered_prompt[:200])
 
-    model = "gpt-3.5-turbo" if (req.plan or "free").lower() == "free" else "gpt-4o"
-    desired_cap = 3000
+        # Select model and compute a SAFE max_tokens dynamically
+        model = "gpt-3.5-turbo" if (req.plan or "free").lower() == "free" else "gpt-4o"
+        desired_cap = safe_max_tokens(
+            model_name=model,
+            prompt_text=rendered_prompt,
+            desired_cap=3000,  # target if possible
+            buffer=200         # safety margin
+        )
+        print("[DEBUG] PROMPT TOKENS:", count_tokens(model, rendered_prompt))
+        print("[DEBUG] SAFE MAX TOKENS:", desired_cap)
 
-    print("[DEBUG] PROMPT TOKENS:", count_tokens(model, rendered_prompt))
+        # Aggregate streamed pages into one final string, then return JSON
+        full_text = await stream_paged_completion(
+            model=model,
+            system_guard=SYSTEM_GUARD,
+            initial_user_content=rendered_prompt,
+            desired_cap=desired_cap,
+        )
 
-    async def token_stream():
-        try:
-            async for chunk in stream_paged_completion(
-                model=model,
-                system_guard=SYSTEM_GUARD,
-                initial_user_content=rendered_prompt,
-                desired_cap=desired_cap,
-            ):
-                yield chunk
-            if req.tool and req.tool.lower() in ["architecture", "genai", "platform_audit"]:
-                yield FOOTER
-        except Exception as e:
-            import traceback
-            print("[DEBUG] Exception in token_stream:", str(e))
-            traceback.print_exc()
-            yield f"\n\n[Error]: {str(e)}"
+        # Optional footer for certain tools
+        if req.tool and req.tool.lower() in ["architecture", "genai", "platform_audit"]:
+            full_text += FOOTER
 
-    return StreamingResponse(token_stream(), media_type="text/plain")
+        return JSONResponse({"result": full_text})
+
+    except Exception as e:
+        import traceback
+        print("[DEBUG] Exception in /generate:", str(e))
+        traceback.print_exc()
+        return JSONResponse({"error": str(e)}, status_code=500)
