@@ -1,6 +1,4 @@
-Respond with a detailed, root-cause analysis and actionable resolution steps. 
-Think like a staff-level SRE or DevOps engineer handling a live production incident in front of the CTO. 
-Your output should read as if it’s the official incident report + action plan — clean, structured, and production-ready.
+Respond with a detailed, root-cause analysis and actionable resolution steps. Think like a staff-level SRE or DevOps engineer handling a live production incident in front of the CTO. Your output should read as if it’s the official incident report + action plan — clean, structured, and production-ready.
 
 Prompt: {{ prompt }}
 Tool concerned: {{ tool }}
@@ -42,46 +40,45 @@ List 2–4 probable causes across layers:
 ## 2. 🧭 Prioritized Step-by-Step Resolution
 
 ### Stage 1 – Quick, low-risk checks
-```bash
-<investigation commands here>
-<validation commands here>
-```
+    # Investigation commands
+    <investigation commands here>
+    # Validation commands
+    <validation commands here>
 
 ### Stage 2 – Configuration adjustments
-```bash
-<investigation commands here>
-<validation commands here>
-```
+    # Investigation commands
+    <investigation commands here>
+    # Validation commands
+    <validation commands here>
 
 ### Stage 3 – Redeployments, scaling, or infra changes
-```bash
-<investigation commands here>
-<validation commands here>
-```
+    # Investigation commands
+    <investigation commands here>
+    # Validation commands
+    <validation commands here>
 
 ---
 
 ## 3. 🛠 Recommended Code or Config Fix
 Always start with the filename as a heading, then one clean block per file:
-```yaml
-# Example for Kubernetes memory fix
-### deployment.yaml
-resources:
-  requests:
-    memory: "512Mi"
-  limits:
-    memory: "1Gi"
-```
+
+    # Example for Kubernetes memory fix
+    ### deployment.yaml
+    resources:
+      requests:
+        memory: "512Mi"
+      limits:
+        memory: "1Gi"
 
 ---
 
 ## 4. 🔐 Cloud & Platform-Specific Notes
-{% if "AWS" in prompt or "EKS" in prompt %}
+{% if 'AWS' in prompt or 'EKS' in prompt %}
 - IAM roles, SG/NACL rules, NAT Gateway health, CloudWatch log groups
 - Check RDS limits and networking
-{% elif "Azure" in prompt or "AKS" in prompt %}
+{% elif 'Azure' in prompt or 'AKS' in prompt %}
 - NSG rules, Managed Identity, Key Vault access
-{% elif "GCP" in prompt or "GKE" in prompt %}
+{% elif 'GCP' in prompt or 'GKE' in prompt %}
 - IAM roles, firewall rules, Cloud SQL connections, VPC connectors
 {% endif %}
 
