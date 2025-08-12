@@ -1,0 +1,17 @@
+### Object Storage (S3/GCS/Blob) — Pro SRE Hands-On
+
+Quick Access Tests
+- aws s3 ls s3://<bucket>                      # Verify basic access
+- aws s3 cp /tmp/test.txt s3://<bucket>/test   # Put/Get sanity
+
+Permissions & Policy
+- Check bucket policy and IAM principal perms (GetObject/PutObject/ListBucket).
+- Validate CORS rules if browser traffic is involved; fix 403/AccessDenied.
+
+Networking / Pathing
+- Ensure correct region and endpoint; verify VPC endpoints/NAT egress for private subnets.
+- If using presigned URLs, confirm expiry/TTL and system clock sync.
+
+Safety
+- Server-side encryption on; block public access unless explicitly required.
+- Lifecycle rules for cost control and retention guarantees.
