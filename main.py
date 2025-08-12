@@ -147,9 +147,21 @@ def render_template(task_type: str, tool_type: str, prompt: str, context: Option
         return f"You are a DevOps AI assistant for {tool_type}. Only return valid code. Prompt: {prompt}"
 
     template = env.get_template(template_name)
-    rendered = template.render(prompt=prompt, tool=tool_type, context=context, mode=mode)
+
+    # ✅ Prevent duplication for Platform Audit by clearing context
+    if template_name == "platform_audit.jinja2":
+        context = None  
+
+    rendered = template.render(
+        prompt=prompt,
+        tool=tool_type,
+        context=context,
+        mode=mode
+    )
+
     if template_name == "platform_audit.jinja2":
         assert "TEMPLATE_VERSION: 2025-08-11 LeanExec" in rendered, "Wrong audit template version loaded"
+
     return rendered
 
 def is_unresolved(response: str) -> bool:
@@ -244,12 +256,15 @@ async def stream_paged_completion(model: str, system_guard: str, initial_user_co
 
 @app.post("/generate")
 async def generate_code(req: PromptRequest):
-    rendered_prompt = env.get_template("platform_audit.jinja2").render(
+    task_type = detect_task_type(req.prompt, req.tool)
+    rendered_prompt = render_template(
+        task_type=task_type,
+        tool_type=req.tool,
         prompt=req.prompt,
-        tool=req.tool,
         context=req.context,
         mode=req.mode or "summary"
     )
+
     print("[DEBUG] FIRST_200]\n", rendered_prompt[:200])
 
     model = "gpt-3.5-turbo" if (req.plan or "free").lower() == "free" else "gpt-4o"
