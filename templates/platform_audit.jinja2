@@ -1,63 +1,74 @@
-TEMPLATE_VERSION: 2025-08-11 LeanExec
-{# ===== Platform Audit (Bulletproof Gold Edition) ===== #}
+{# ===== Platform Audit (Safe & Concise) ===== #}
 📬 Respond with a **concise, high-impact platform audit** for a CTO board briefing.  
 Be quantified, decisive, and specific to the prompt — avoid generic filler advice.  
 Output ≤250 words, McKinsey/Bain-style.
 
-Rules:
-- For **Performance**, say what improves and by how much (e.g., “API P99 ↓25–35% via req/limit tuning + HPA stabilization”), not just “implement autoscaling.”
-- For **NAT costs**, specify Gateway Endpoints (S3/DynamoDB) + 1 NAT per AZ. Do not say “PrivateLink for everything.”
-- Logging/monitoring = Observability; does not count as Security. Put OIDC/no long-lived keys under Security.
-- Keep format exactly as below. Do not omit or rename sections.
-
 Prompt: {{ prompt }}
-Tool concerned: Platform Audit
+Tool: Platform Audit
+{% if context %}Context: {{ context }}{% endif %}
 
-{% if context %}
-Prior Conversation:
-{{ context }}
+{# Gatekeeping - safe default #}
+{% if flags is defined and (not flags.get("skipChecks")) %}
+❌ Do not proceed unless the prompt contains:
+- Cloud provider(s)
+- Workload type(s)
+- Team size or ops scope
+- Mention of Kubernetes, CI/CD, or modern platform tools
+
+If missing, ask 1–2 clarifying questions and stop.
 {% endif %}
 
 ---
 
 ## 🚀 Executive Snapshot (90-Day)
-- **Savings:** 2–3 top quantified cost cuts.
-- **Performance:** Quantified latency/throughput gain.
-- **Risk:** Security/reliability gaps to close.
+- **Savings:** [Top 2–3 with £ or %] (e.g., “Rightsize EKS nodes: £65k/yr; remove idle LB: £12k/yr”)
+- **Performance:** [1–2 gains] (e.g., “API P99 ↓40% via HPA + caching”)
+- **Risk:** [1–2 critical fixes] (e.g., “Remove long-lived keys; enable CIS/KMS”)
 
 ---
 
 ## 📈 Quick Wins (0–90 Days)
-- 3–4 high-impact actions with £/$ or % ROI.
-- Include infra rightsizing, NAT consolidation, automation.
+- [Action + quantified impact]
+- [Action + quantified impact]
+- [Action + quantified impact]
 
 ---
 
 ## 🧠 Architecture Notes
-- **Over/under-engineering:** e.g., remove idle clusters, reduce heavy NAT usage.
-- **Scale posture:** e.g., commit RI/SP plan, adopt HPA with tuned thresholds.
-- **Delivery:** CI/CD optimisations for faster releases.
-- **Kubernetes:** Requests/limits tuning, HPA stabilisation, node pool rightsizing.
-- **Observability:** Centralised logging & monitoring → MTTR ↓30–40%.
-- **Security:** Enforce OIDC, rotate/remove long-lived keys, least privilege.
+- **Over/under-engineering:** Flag and justify.
+- **Scale posture:** Autoscaling, spot/RI mix, region fit.
+- **Delivery:** CI/CD bottlenecks, self-service potential.
+- **Kubernetes:** Requests/limits, binpack, scaling configs.
+- **Data/GenAI:** GPU utilisation, RAG/vector DB fit.
+- **Security:** OIDC, least privilege, rotation cadence.
 
 ---
 
 ## 📊 KPI Scorecard
-
-| Dimension         | /10 | Gap (one-liner)                      |
-|-------------------|-----|--------------------------------------|
-| Cost Efficiency   | {{ wa_cost or "6" }} | Excess NAT cost, no SP/RI plan |
-| Security          | {{ wa_security or "5" }} | Long-lived keys, no OIDC    |
-| Reliability       | {{ wa_reliability or "6" }} | No recent DR tests         |
-| Delivery Velocity | {{ wa_operational or "7" }} | Manual approvals in CI/CD  |
+{# Instruct the model to assign realistic scores based on the audit above. #}
+{# Scoring guideline: 1–4 = weak, 5–6 = baseline, 7–8 = good, 9–10 = excellent. #}
+| Dimension         | /10 | Gap (one-liner)                 |
+|-------------------|-----|---------------------------------|
+| Cost Efficiency   | [fill 1–10] | [biggest waste or lever]     |
+| Security          | [fill 1–10] | [highest-risk gap]           |
+| Reliability       | [fill 1–10] | [DR/SLO/SLA weak point]      |
+| Delivery Velocity | [fill 1–10] | [pipeline or flow constraint]|
 
 ---
 
-## 💡 Next Steps  
-{# Do not change or remove wording below #}
-- ✅ Execute endpoints + NAT consolidation; commit RI/SP plan.  
-- ✅ Roll out rightsizing + HPA policy; cache hot paths.  
-- ✅ Enforce OIDC; schedule quarterly DR tests.  
+{% if flags is defined and flags.get("deliveryPlan") %}
+## 🗓️ 30-Day Plan
+- **W1:** Assess & map dependencies.
+- **W2:** Rightsize + baseline observability/security.
+- **W3:** Automate CI/CD, run perf/fault tests.
+- **W4:** Go-live, KT, next workload roadmap.
+{% endif %}
+
+---
+
+## 💡 Next Steps
+- ✅ Cut £X/yr via rightsizing + LB consolidation  
+- ✅ Enforce OIDC & rotation; remove static keys  
+- ✅ Consolidate toolchain; standardise golden paths  
 
 📬 For hands-on execution, contact **support@codeweave.co**.
