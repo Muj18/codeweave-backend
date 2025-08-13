@@ -16,9 +16,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 import json
 import smtplib
 from email.message import EmailMessage
-from typing import Optional
-
-# ✅ For dedupe/guards
+from typing import Optional, List
 import re
 import hashlib
 
@@ -39,12 +37,37 @@ env = Environment(
     autoescape=select_autoescape()
 )
 
+# --- Capability keywords ---
+CAPABILITY_KEYWORDS = {
+    "k8s_core": ["k8", "kubernetes", "pod", "deployment", "hpa", "node", "eks", "gke", "aks", "crashloopbackoff"],
+    "ingress_lb": ["ingress", "nginx", "alb", "nlb", "elb", "agic", "gateway", "istio", "traefik", "load balancer", "target group", "unhealthy"],
+    "db_sql": ["postgres", "postgresql", "mysql", "mariadb", "aurora", "rds", "cloud sql", "too many clients", "max connections", "connection pool"],
+    "cache_kv": ["redis", "memcached", "cache", "hot key"],
+    "messaging_streams": ["kafka", "msk", "eventhub", "pubsub", "rabbitmq", "nats", "consumer lag"],
+    "iac_state": ["terraform", "tfstate", "backend.hcl", "terragrunt", "state lock", "force-unlock", "s3 state"],
+    "observability": ["prometheus", "grafana", "datadog", "new relic", "opentelemetry", "apm", "trace", "metrics", "logs"],
+    "storage_obj": ["s3", "gcs", "blob", "object storage", "bucket", "signed url", "403", "access denied"],
+    "auth_network": ["iam", "irsa", "managed identity", "service account", "role", "security group", "nacl", "firewall", "nat", "vpc", "subnet", "dns"],
+}
+
+def detect_capabilities(text: str) -> List[str]:
+    t = (text or "").lower()
+    caps: List[str] = []
+    for cap, keys in CAPABILITY_KEYWORDS.items():
+        if any(k in t for k in keys):
+            caps.append(cap)
+    if "observability" not in caps:
+        caps.append("observability")
+    return caps
+
+# --- Request model ---
 class PromptRequest(BaseModel):
     tool: str
     prompt: str
     context: Optional[str] = None
     plan: str = "free"
     mode: Optional[str] = None
+    capabilities: Optional[List[str]] = None  # NEW
 
 MODEL_LIMITS = {
     "gpt-3.5-turbo": 4096,
@@ -75,6 +98,7 @@ def safe_max_tokens(model_name: str, prompt_text: str, desired_cap: int, buffer:
     remaining = max(256, limit - prompt_tokens - buffer)
     return max(256, min(desired_cap, remaining))
 
+# --- Detect task type ---
 def detect_task_type(prompt: str, tool: str) -> str:
     p = prompt.lower()
     t = tool.lower()
@@ -90,23 +114,6 @@ def detect_task_type(prompt: str, tool: str) -> str:
     data_mlops = {"airflow / dbt", "vertex ai / sagemaker", "data preprocessing pipeline"}
     code_languages = {"python", "go", "bash", "typescript", "javascript", "java", "c#", "rust",
                       "powershell", "shell script", "other (script/code)", "bash script", "python script", "go script"}
-    mlops_keywords = ["mlops", "ml pipeline", "ml model", "model training", "model testing", "model validation",
-                      "model deployment", "model serving", "model monitoring", "model registry", "model versioning",
-                      "training loop", "training job", "experiment tracking", "hyperparameter tuning", "batch training",
-                      "automl", "pytorch", "tensorflow", "onnx", "tfx", "kubeflow", "mlflow", "vertex ai", "sagemaker",
-                      "azure ml", "google ai platform", "ai platform", "training pipeline", "model evaluation",
-                      "online inference", "offline inference", "real-time prediction", "docker for ml", "ci/cd for ml",
-                      "deploy model", "test model", "fine-tune model", "llm training", "training script", "training dataset"]
-    data_architecture_keywords = [
-        "data architecture", "data modeling", "data schema", "data ingestion", "data transformation",
-        "data pipeline", "data quality", "data validation", "data integration", "data lineage",
-        "data lake", "datalake", "data warehouse", "data mart", "data platform", "data flow",
-        "etl", "elt", "extract transform load", "batch processing", "stream processing",
-        "bigquery", "redshift", "snowflake", "synapse", "hudi", "iceberg", "delta lake", "delta",
-        "lakehouse", "schema evolution", "columnar storage", "parquet", "avro", "orc", "data mesh",
-        "metadata store", "data catalog", "data governance", "dbt", "airflow", "apache beam", "glue job",
-        "warehouse design", "data system", "data sync", "data sharding", "big data", "distributed storage"
-    ]
     troubleshooting_keywords = ["error", "bug", "crash"]
 
     normalized_tool = t.strip().lower()
@@ -119,18 +126,17 @@ def detect_task_type(prompt: str, tool: str) -> str:
     if normalized_tool in genai:
         return "genai"
     if normalized_tool in data_mlops:
-        if any(w in p for w in mlops_keywords):
-            return "mlops"
-        if any(w in p for w in data_architecture_keywords):
-            return "data_architecture"
-        return "architecture"
+        return "mlops"
     if normalized_tool in code_languages:
         return "code_gen"
     if normalized_tool == "troubleshooting":
         return "troubleshooting"
     return "architecture"
 
-def render_template(task_type: str, tool_type: str, prompt: str, context: Optional[str] = None, mode: Optional[str] = None):
+# --- Render template ---
+def render_template(task_type: str, tool_type: str, prompt: str, context: Optional[str] = None,
+                    mode: Optional[str] = None, capabilities: Optional[List[str]] = None):
+
     template_name = None
     if task_type == "platform_audit":
         template_name = "platform_audit.jinja2"
@@ -152,16 +158,25 @@ def render_template(task_type: str, tool_type: str, prompt: str, context: Option
 
     template = env.get_template(template_name)
 
-    # ✅ Prevent duplication for Platform Audit by clearing context
     if template_name == "platform_audit.jinja2":
         context = None
 
-    rendered = template.render(
-        prompt=prompt,
-        tool=tool_type,
-        context=context,
-        mode=mode
-    )
+    if template_name == "troubleshooting.jinja2":
+        caps = capabilities or detect_capabilities(f"{prompt} {tool_type} {context or ''}")
+        rendered = template.render(
+            prompt=prompt,
+            tool=tool_type,
+            context=context,
+            mode=mode,
+            capabilities=caps,
+        )
+    else:
+        rendered = template.render(
+            prompt=prompt,
+            tool=tool_type,
+            context=context,
+            mode=mode,
+        )
 
     if template_name == "platform_audit.jinja2":
         assert "TEMPLATE_VERSION: 2025-08-11 LeanExec" in rendered, "Wrong audit template version loaded"
@@ -202,10 +217,10 @@ SYSTEM_GUARD = (
     "If you cannot finish due to length, end with: [CONTINUE_NEEDED]."
 )
 
-# ---------- Duplication-proof streaming ----------
 def _norm_text_for_dedupe(s: str) -> str:
     return re.sub(r"\s+", " ", (s or "").strip().lower())
 
+# --- Streaming completion ---
 async def stream_paged_completion(model: str, system_guard: str, initial_user_content: str, desired_cap: int):
     temperature = 0.3
     max_pages = 4
@@ -213,8 +228,6 @@ async def stream_paged_completion(model: str, system_guard: str, initial_user_co
     full_text = ""
     seen_hashes = set()
     current_prompt = initial_user_content
-
-    # Hard stop tokens: if the model restarts or reaches CTA, cut stream
     HARD_STOP_TOKENS = [
         "📬 For hands-on execution",
         "## 🚀 Executive Snapshot",
@@ -235,7 +248,7 @@ async def stream_paged_completion(model: str, system_guard: str, initial_user_co
             temperature=temperature,
             max_tokens=max_tokens,
             stream=True,
-            stop=HARD_STOP_TOKENS,  # 🔒 hard guard against restarts
+            stop=HARD_STOP_TOKENS,
         )
 
         page_buf = ""
@@ -244,29 +257,17 @@ async def stream_paged_completion(model: str, system_guard: str, initial_user_co
             if content:
                 page_buf += content
 
-        # --- De-dupe & control flow guards ---
         if not page_buf.strip():
-            print("[DEBUG] Empty page_buf; stopping.")
             break
 
         page_hash = hashlib.sha256(_norm_text_for_dedupe(page_buf).encode()).hexdigest()
         if page_hash in seen_hashes:
-            print("[DEBUG] Duplicate page detected; stopping.")
             break
         seen_hashes.add(page_hash)
 
         if _norm_text_for_dedupe(page_buf) in _norm_text_for_dedupe(full_text):
-            print("[DEBUG] Page content already contained in full_text; stopping.")
             break
 
-        if page_buf.count("## 🚀 Executive Snapshot") > 1:
-            first = page_buf.find("## 🚀 Executive Snapshot")
-            second = page_buf.find("## 🚀 Executive Snapshot", first + 1)
-            if second != -1:
-                page_buf = page_buf[:second].rstrip()
-                print("[DEBUG] Trimmed repeated Executive Snapshot block within page.")
-
-        # ✅ Trim marker if present, then yield
         if "[CONTINUE_NEEDED]" in page_buf:
             trimmed = page_buf.replace("[CONTINUE_NEEDED]", "").rstrip()
             yield trimmed
@@ -275,10 +276,8 @@ async def stream_paged_completion(model: str, system_guard: str, initial_user_co
             yield page_buf
             full_text += page_buf
 
-        # Continue only if explicitly requested
         if "[CONTINUE_NEEDED]" not in page_buf:
-         print("[DEBUG] No CONTINUE_NEEDED marker; stopping after this page.")
-         break
+            break
 
         tail = full_text[-3000:]
         current_prompt = (
@@ -296,9 +295,10 @@ async def stream_paged_completion(model: str, system_guard: str, initial_user_co
         log_unresolved_issue({"task": "platform_audit", "response": full_text})
         email_issue({"task": "platform_audit", "response": full_text})
 
+# --- Generate route ---
 @app.post("/generate")
 async def generate_code(req: PromptRequest):
-    print("DEBUG Request Payload:", req.dict())  # 👈 This will show prompt, tool, mode, etc.
+    print("DEBUG Request Payload:", req.dict())
 
     task_type = detect_task_type(req.prompt, req.tool)
     rendered_prompt = render_template(
@@ -306,15 +306,12 @@ async def generate_code(req: PromptRequest):
         tool_type=req.tool,
         prompt=req.prompt,
         context=req.context,
-        mode=req.mode or "summary"
+        mode=req.mode or "summary",
+        capabilities=req.capabilities,   # NEW
     )
-
-    print("[DEBUG] FIRST_200]\n", rendered_prompt[:200])
 
     model = "gpt-3.5-turbo" if (req.plan or "free").lower() == "free" else "gpt-4o"
     desired_cap = 3000
-
-    print("[DEBUG] PROMPT TOKENS:", count_tokens(model, rendered_prompt))
 
     async def token_stream():
         try:
@@ -325,12 +322,10 @@ async def generate_code(req: PromptRequest):
                 desired_cap=desired_cap,
             ):
                 yield chunk
-            # Include footer for these tools (normalize both spellings)
             if req.tool and req.tool.lower() in ["architecture", "genai", "platform audit", "platform_audit"]:
                 yield FOOTER
         except Exception as e:
             import traceback
-            print("[DEBUG] Exception in token_stream:", str(e))
             traceback.print_exc()
             yield f"\n\n[Error]: {str(e)}"
 
