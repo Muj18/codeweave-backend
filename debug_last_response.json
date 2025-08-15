@@ -1,0 +1,84 @@
+{
+    "1": {
+        "Summary of Recommended Architecture": {
+            "description": "Proposing a serverless architecture using AWS Lambda for the Python CLI tool to print Hello World. This choice aligns with the goal of building a lightweight tool with minimal operational overhead. The architecture ensures high performance, scalability, reliability, security, compliance, and sustainability.",
+            "Target SLOs": {
+                "p95 latency": "100ms",
+                "availability": "99.99%",
+                "RPO": "1 hour",
+                "RTO": "15 minutes"
+            }
+        }
+    },
+    "2": {
+        "High-Level Architecture Diagram (ASCII)": "```\nCLI Tool -> AWS Lambda\n```"
+    },
+    "3": {
+        "Recommended Services and Tools": {
+            "Networking": {
+                "AWS": ["VPC", "Subnets", "Security Groups"]
+            },
+            "Compute": {
+                "AWS": ["Lambda"]
+            }
+        }
+    },
+    "4": {
+        "Infrastructure as Code Scaffold (multi-file)": {
+            "### serverless.tf": "```hcl\nprovider \"aws\" {\n  region = \"us-east-1\"\n}\n\nresource \"aws_lambda_function\" \"hello_world\" {\n  function_name = \"helloWorld\"\n  handler = \"hello.handler\"\n  runtime = \"python3.8\"\n  role = aws_iam_role.lambda_exec_role.arn\n}\n```"
+        }
+    },
+    "5": {
+        "Security, IAM, Compliance & Networking Best Practices": {
+            "Identity": ["Least privilege", "Role-based access"],
+            "Network": ["Private subnets", "Egress controls", "TLS in transit"],
+            "Secrets": ["KMS", "Rotation"],
+            "Data": ["Encryption at rest", "Backup/restore tests"]
+        }
+    },
+    "6": {
+        "CI/CD Strategy (with policy & security gates)": {
+            "Pipelines": ["Build", "Test", "Scan", "Deploy"],
+            "Scanners & Gates": ["IaC checks", "Container security scans", "AppSec testing"]
+        }
+    },
+    "7": {
+        "Observability, Reliability & SRE Targets": {
+            "Golden Signals": ["Latency", "Traffic", "Errors"],
+            "SLO/SLIs": ["Alerting", "Error budgets"]
+        }
+    },
+    "8": {
+        "Cost Optimization (FinOps)": {
+            "Strategies": ["Rightsizing", "Autoscaling", "Lifecycle policies"]
+        }
+    },
+    "9": {
+        "Benchmarks, Frameworks & Controls Mapping": {
+            "Cloud Architecture": ["Well-Architected principles"],
+            "Security & Compliance": ["CIS Benchmarks", "NIST CSF"],
+            "Containers/Kubernetes": ["CIS Kubernetes Benchmark"],
+            "SRE/Delivery": ["DORA metrics", "MTTR targets"]
+        }
+    },
+    "10": {
+        "Risks, Trade-offs & Alternatives": {
+            "Top Risks": ["Vendor lock-in", "Ops complexity"],
+            "Mitigations": ["Use of serverless architecture"]
+        }
+    },
+    "11": {
+        "Evidence & Compliance Matrix (for auditors)": {
+            "Control/Benchmark": "CIS K8s 1.2.10",
+            "Scope (Svc/Layer)": "Lambda function",
+            "Implementation/Evidence": "Enabled logging",
+            "Automated Check (Tool)": "AWS CloudWatch",
+            "Frequency/Owner": "Continuous monitoring/DevOps team"
+        }
+    },
+    "12": {
+        "Infrastructure as Code (multi-file) — Code Section ONLY": {
+            "### serverless.tf": "```hcl\nprovider \"aws\" {\n  region = \"us-east-1\"\n}\n\nresource \"aws_lambda_function\" \"hello_world\" {\n  function_name = \"helloWorld\"\n  handler = \"hello.handler\"\n  runtime = \"python3.8\"\n  role = aws_iam_role.lambda_exec_role.arn\n}\n```"
+        }
+    }
+}
