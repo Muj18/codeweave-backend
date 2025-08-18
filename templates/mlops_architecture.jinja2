@@ -1,6 +1,11 @@
-Respond with a detailed, production-ready MLOps pipeline and architecture. Think like a staff-level MLOps engineer presenting to a CTO and data leadership. Include model lifecycle, CI/CD, monitoring, and reproducibility.
+{# ===== MLOps Architecture Template ===== #}
+
+Respond with a detailed, production-ready MLOps pipeline and architecture.
+Think like a **staff-level MLOps engineer** presenting to a CTO, data leadership, and platform teams.
+Always include model lifecycle, CI/CD, monitoring, reproducibility, and compliance.
+
 Prompt: {{ prompt }}
-Tool : {{ tool }}
+Tool: {{ tool }}
 {% if context %}
 Prior Conversation:
 {{ context }}
@@ -9,45 +14,65 @@ Prior Conversation:
 ---
 
 ❌ Do not proceed unless the prompt clearly includes:
+- **Goal:** What is the ML system supposed to do? (e.g., churn prediction, image classification, fraud detection)
+- **Scope:** Training, deployment, monitoring, CI/CD, retraining? Which stages apply?
+- **Infrastructure:** Which cloud (AWS, GCP, Azure), hybrid, or on-prem?
 
-Goal: What is the ML system supposed to do? (e.g., churn prediction, image classification, fraud detection)
-
-Scope: Does it require training, deployment, monitoring, or all? Should this include CI/CD, data versioning, retraining?
-
-Infrastructure: Which cloud (AWS, GCP, Azure), on-prem, or hybrid?
-
-✅ If any of these are missing, ask 1–2 direct follow-up questions — then stop.
+✅ If unclear, ask 1–2 clarifying questions and STOP.
 
 ---
 
-✅ Otherwise, provide a complete production-grade answer in the following format:
----
+✅ If complete → produce a **full unicorn-class output** with the following sections:
 
+# 1) 📌 ML System Overview
+- System purpose, success metrics (accuracy/F1/ROC-AUC, latency, throughput).
+- Business alignment (ROI, customer value, regulatory impact).
+- Expected data scale + retraining cadence.
 
+# 2) 🏗️ End-to-End MLOps Pipeline
+- Clear diagram (ASCII/Markdown) covering:
+  - Data ingestion, preprocessing, feature store
+  - Model training, registry, CI/CD integration
+  - Deployment (batch/online/streaming)
+  - Monitoring (drift, bias, latency, explainability)
+  - Feedback loop & retraining trigger
 
-1. ML System Overview
-2. MLOps Pipeline Architecture
-3. Tools & Stack (training, registry, deployment, monitoring)
-4. Cloud-specific considerations (AWS Sagemaker, GCP Vertex AI, etc.)
-5. Security, Scaling, Governance Best Practices
-6. Code Scaffolding
+# 3) 🔧 Tools & Stack
+- Table comparing **3 stack options per layer** (e.g., Airflow vs Prefect vs Step Functions; MLflow vs SageMaker Registry vs Vertex).
+- Highlight recommended option with rationale (cost, scale, ops complexity).
 
+# 4) 🌩️ Cloud-Specific Implementation
+- If AWS → SageMaker, ECR, S3, KMS, Step Functions, CloudWatch.
+- If GCP → Vertex AI, GCS, Pub/Sub, Cloud Build, KMS.
+- If Azure → ML Studio, ACR, Blob Storage, Monitor, Key Vault.
+- Always embed compliance/security best practices (CIS, NIST, ISO).
 
+# 5) 🔐 Security, Scaling, Governance
+- IAM: least privilege, workload identity, short-lived tokens.
+- Data: encryption at rest (CMEK/KMS), transit (TLS), PII handling.
+- Scaling: autoscaling (batch vs online inference), GPU/TPU optimization.
+- Governance: model lineage, approvals, audit logs, reproducibility.
 
-Follow this format:
-- Always **start with the filename** as a heading like this:
-  ### model_pipeline.yaml (this is just an example)
-- Then immediately follow it with a properly tagged code block:
+# 6) 🧾 Infrastructure-as-Code Scaffold
+- Provide **multi-file scaffold** (Terraform + Kubernetes manifests + pipeline YAML).
+- Each file = `### filename.ext` + fenced code block.
+- Must be runnable and production-grade — no stubs, no placeholders.
+- Include:
+  - Terraform for core infra
+  - CI/CD pipeline YAML (GitHub Actions / GitLab / Argo)
+  - Training job spec (K8sJob/SageMaker/Vertex pipeline)
+  - Deployment spec (Helm, K8s, or serverless)
+  - Monitoring config (Prometheus/Grafana or cloud-native)
 
-  ### filename.ext
-  ```(extension)  
-  <code content>  
-  ```
+# 7) 📊 Observability & Monitoring
+- Drift detection, shadow testing, canary rollout.
+- Golden signals: latency, error rate, data freshness, feature skew.
+- Alerts → Slack/Teams/PagerDuty integration.
 
-- **Always include the correct code block language** matching the file extension (e.g., `py`, `json`, `hcl`, `bash`, `env`, etc.).
+# 8) ⚠️ Risks & Trade-offs
+- Top 3 design trade-offs (e.g., cost vs latency, managed vs open-source stack).
+- Risk mitigations and fallback options.
 
-- **Do not omit the closing triple backticks**, and **do not add extra markdown formatting or explanations**.
-
-If multiple code blocks contribute to the same file (e.g., `main.tf` or `main.yaml`), DO NOT create multiple blocks. Instead:
-Merge them into one code block under a single `### filename.ext` section.
-
+# 9) ✅ Executive Sign-Off
+- Closing statement to leadership: why this pipeline is scalable, compliant, and ROI-positive.
+- Call to action: approve design, fund infra, proceed with rollout.

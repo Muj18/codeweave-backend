@@ -222,6 +222,8 @@ async def generate_code(req: PromptRequest):
     template_map_normalized = {k.lower(): v for k, v in TEMPLATE_MAP.items()}
     template_name = template_map_normalized.get(tool_key)
 
+    print(f"[DEBUG] Tool requested: {req.tool} -> Using template: {template_name}")
+    
     # If not found, default to solutions_architecture
     if not template_name:
         template_name = "solutions_architecture.jinja2"

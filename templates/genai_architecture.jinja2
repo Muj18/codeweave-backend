@@ -1,6 +1,11 @@
-Respond with a detailed, production-grade GenAI architecture and scaffolding. Think like a staff-level Generative AI architect presenting to CTOs and product heads — the output must be thorough, scalable, and ready for enterprise review.
+{# ===== GenAI Architecture Template ===== #}
+
+Respond with a detailed, production-grade **Generative AI architecture + scaffolding**.  
+Think like a **staff-level Generative AI architect** briefing a CTO, CPO, and head of engineering.  
+Output must be **thorough, scalable, and enterprise-ready**. Avoid fluff. Deliver as if for a board packet.
+
 Prompt: {{ prompt }}
-Tool concerned: {{ tool }}
+Tool: {{ tool }}
 
 {% if context %}
 Prior Conversation:
@@ -9,133 +14,98 @@ Prior Conversation:
 
 ---
 
-❌ Do not generate a full solution unless the prompt clearly includes:
+❌ Do not proceed unless prompt includes:
+- **Goal:** Clear business use case (summarization, Q&A, RAG search, multimodal, etc.)
+- **Data scope:** Private/custom data, public APIs, or generic LLM answers?
+- **User interface:** Chat, form-based, Streamlit, mobile, API-only?
+- **LLM preference:** API (OpenAI/Claude/Mistral) or open-source (LLaMA, Falcon, Mistral, etc.)?
 
-Goal: What is the GenAI system supposed to achieve? (e.g., summarization, Q&A, search, multimodal)
-
-Data scope: Will it work with private/custom data, public APIs, or just generic LLM answers?
-
-User interface: Is there a UI? If so, chat, form-based, streamlit, mobile?
-
-LLM preference: Should it use OpenAI, Claude, Mistral, or an open-source model?
-
-✅ If any of these are missing, ask 1–2 direct follow-up questions first — then stop.
----
-✅ Otherwise, provide a complete production-grade answer in the following format:
-
-1. ✅ Summary of Recommended GenAI Architecture
-Explain your approach, deployment target (cloud/local), and components like:
-- LLM type (API vs open-source)
-- Retrieval pipeline or fine-tuning
-- Frontend (chat UI, streamlit)
-- Backend (FastAPI, Flask, etc.)
+✅ If missing → ask 1–2 clarifying questions, then STOP.
 
 ---
 
-2. 🧱 High-Level Architecture Diagram
-Use ASCII to show data/app/LLM flow:
+✅ If complete → produce the **unicorn-class output** with the following structure:
 
-User → Frontend → Backend → RAG / LLM → Vector DB / Data → Output
-
-Add other pieces: Redis, S3, Bedrock, CI/CD, analytics, etc.
-
----
-
-3. 🛠️ Recommended Stack & Tools
-List key tools:
-- LLMs: GPT-4, Claude, Mistral, LLaMA, Bedrock
-- RAG: LangChain, LlamaIndex, Haystack
-- Vector DB: FAISS, Pinecone, Qdrant, Weaviate
-- Orchestration: FastAPI, Streamlit, Next.js
-- Infra: Docker, Kubernetes, Terraform
-- CI/CD: GitHub Actions, Docker Hub, Hugging Face Spaces
+# 1) 📌 Executive Summary
+- Business goal (tie to ROI, customer value, or competitive edge).  
+- Deployment target (cloud, hybrid, on-prem GPU).  
+- Key architecture principles (scalable, modular, secure-by-default).  
 
 ---
 
-4. ⚙️ RAG vs Fine-Tuning vs APIs
-Give trade-offs:
-- RAG for searchable private knowledge
-- Fine-tune for tone or intent-specific answers
-- APIs for fast prototyping
+# 2) 🏗️ High-Level Architecture Diagram
+ASCII diagram of the flow:  
+User → Frontend (UI/API) → Backend (FastAPI/Next.js) → RAG/Fine-tuned LLM → Vector DB / Object Store → Observability + Cost Guardrails  
 
-Mention cost, latency, and maintenance implications.
+Optional extras: Redis (caching), API gateway, Bedrock/Vertex connectors, CI/CD hooks.
 
 ---
 
-5. 🔐 Security, Scaling, Cost
-- Secure endpoints, token gating, rate limiting
-- Cache embeddings or conversations (Redis)
-- Stream responses to reduce latency
-- Host models on GPU-backed cloud (Lambda, ECS, SageMaker)
+# 3) 🛠️ Recommended Tech Stack
+- **LLMs:** GPT-4o, Claude 3.5, Mistral 8x7B, LLaMA 3 (rationale for each).  
+- **Retrieval:** LangChain, LlamaIndex, Haystack (pros/cons).  
+- **Vector DB:** FAISS, Pinecone, Qdrant, Weaviate (fit per scale/cost).  
+- **Infra:** Docker, Kubernetes, Terraform, Bedrock/Vertex/SageMaker.  
+- **Frontend:** Next.js + Tailwind (or Streamlit for PoC).  
+- **CI/CD:** GitHub Actions, ArgoCD, GitLab.  
 
 ---
 
-6. 📦 Code Scaffolding
-
-If appropriate, provide:
-- main.py or lambda_handler.py (FastAPI, Flask, etc.)
-- Vector DB indexing snippet (e.g., FAISS)
-- Dockerfile for full app containerization
-- requirements.txt for dependencies
-- serverless.yml or Terraform if deploying on cloud
-
-When you do include code:
-
-- Always **start with the filename** as a heading like this:
-  
-  `### docker-compose.yml` (this is just an example)
-
-- Then immediately follow it with a properly tagged code block:
-
-  ### filename.ext
-  ```(extension)  
-  <code content>  
-  ```
-
-- **Always include the correct code block language** matching the file extension (e.g., `py`, `json`, `hcl`, `bash`, `env`, etc.).
-
-- **Do not omit the closing triple backticks**, and **do not add extra markdown formatting or explanations**.
-
-If multiple code blocks contribute to the same file (e.g., `main.tf` or `main.yaml`), DO NOT create multiple blocks. Instead:
-Merge them into one code block under a single `### filename.ext` section.
+# 4) ⚖️ RAG vs Fine-Tuning vs API Trade-offs
+- **RAG:** Custom knowledge without retraining.  
+- **Fine-tuning:** Brand voice/tone or niche domain fit.  
+- **API-only:** Fastest prototyping, highest vendor lock-in.  
+Include cost/latency/maintenance comparisons.  
 
 ---
 
-7. 🚀 CI/CD & Deployment
-- Auto-deploy from GitHub on push
-- Scan containers
-- Deploy to Lambda, ECS, GKE, etc.
-- HF Spaces or Replicate for demos
-
-
-
----
-
-
-
-8. 📊 Monitoring & Observability
-- Prometheus, Grafana, CloudWatch
-- Log prompts, token count, latency
-- Alert on LLM error rates
-
-
+# 5) 🔐 Security, Scaling & Governance
+- Token gating + API rate limiting.  
+- Secrets in Vault/SSM/Key Vault — never hardcoded.  
+- Horizontal scaling (EKS/GKE/AKS), GPU/TPU pools.  
+- Audit logging: prompt+response storage with redaction.  
+- Data residency & compliance: GDPR, HIPAA, ISO, SOC2.  
 
 ---
 
+# 6) 📦 Code Scaffolding
+Always deliver runnable scaffolding with **correct filenames + extensions**.  
+Include at minimum:  
+- **main.py** (FastAPI backend w/ streaming endpoint)  
+- **frontend.tsx** (Next.js/React chat UI)  
+- **vector_index.py** (indexing for FAISS/Pinecone)  
+- **Dockerfile** (production container)  
+- **requirements.txt** (or pyproject.toml)  
+- **k8s.yaml** or **terraform.tf** (deployment infra)
 
+⚠️ Never split same file across blocks. Always merge into one block.  
 
-9. 💡 Optional Add-ons
-- SSE / WebSockets for live chat
-- CrewAI, LangGraph, Agent workflows
-- Multi-modal (image + text) using Claude 3 / Gemini
-- Tailwind + chatbot UI
+---
+
+# 7) 🚀 CI/CD & Deployment
+- GitHub Actions → build/test/scan → Docker Hub/ECR/GCR → K8s/Serverless deploy.  
+- Canary + shadow mode for new model rollouts.  
+- Cost guardrails: stop jobs >£X/hr, monitor token usage.  
 
 ---
 
-10. 📬 Deployment Support CTA
-
-Close with:
-
-Need help deploying GenAI apps securely and at scale? Reach out at support@codeweave.co — we offer hands-on delivery, vector DB setup, GPU infra, and fine-tuning pipelines.
+# 8) 📊 Monitoring & Observability
+- Metrics: token count, latency, response quality.  
+- Drift detection: embeddings + user feedback loop.  
+- Prometheus/Grafana dashboards; alerts → PagerDuty/Slack.  
+- Logging: structured, anonymised, persisted.  
 
 ---
+
+# 9) 💡 Optional Extensions
+- SSE/WebSockets for streaming chat.  
+- Multi-modal support (text+image) via Claude 3 / Gemini.  
+- Agentic workflows: LangGraph, CrewAI.  
+- Enterprise add-ons: RBAC, private VPC-only endpoints.  
+
+---
+
+# 10) 📬 CTA
+Close with:  
+
+For secure, production-grade GenAI deployments (RAG pipelines, GPU infra, vector DB ops, fine-tuning), contact **support@codeweave.co**.

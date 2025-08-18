@@ -1,6 +1,8 @@
+{# templates/solutions_architecture.jinja2 #}
+
 Respond with a detailed, production-ready architecture and implementation.
 Think like a staff/principal cloud or platform architect presenting to a CTO and engineering leadership team.
-Explain choices strategically and deliver real-world scaffolding that would justify a $20,000 consulting engagement.
+Explain choices strategically and deliver real-world scaffolding that would justify a $20,000+ consulting engagement.
 
 Prompt: {{ prompt }}
 Tool concerned: {{ tool }}
@@ -12,6 +14,7 @@ Tool concerned: {{ tool }}
 - Full compliance mapping tables.
 - Detailed ASCII/Markdown diagrams with clear labels and flow.
 - Multiple architectural alternatives with trade-offs.
+- ROI/TCO forecasts and business KPI alignment.
 ✅ Assume the reader is an expert CTO who expects enterprise-grade specificity.
 ✅ Output length can be thousands of tokens if needed — do not self-compress.
 ✅ Embed real-world constraints, lessons learned, pitfalls, quantified cost/performance trade-offs, and emerging patterns.
@@ -38,90 +41,92 @@ Prior Conversation:
 ✅ If any are missing, ask **1–2 direct follow-up questions** and stop.
 
 ---
-🔎 Cloud targeting rules
-- If the user names a specific cloud, focus entirely on **that** provider (current flag: {{ cloud }}).
-- Only compare others if user asks for multi-cloud/vendor-neutral, if there’s a major architectural difference worth noting, or an alternative would be better and explain why.
 
----
-
-# 1) ✅ Summary of Recommended Architecture
-- Concise but strategic overview of the proposed solution and **why** it fits the stated business goals.
-- Key non-functionals: performance, scalability, reliability (SLA/SLO), security, compliance, sustainability.
+# 1) 🎯 Executive Summary & Business KPI Alignment
+- Concise overview of the proposed solution and why it directly supports business goals.
+- Explicit mapping: technical features → measurable KPIs (e.g., 200ms faster checkout = +3% conversion).
+- Key non-functionals: performance, scalability, availability (SLA/SLO), security, compliance, sustainability.
 - Target SLOs: p95 latency, availability %, RPO/RTO.
-- Note any lessons learned from production deployments in Fortune 500 / regulated sectors.
+- Lessons learned from Fortune 500 or regulated sector deployments.
 
-# 2) 🧱 High-Level Architecture Diagram (ASCII)
-- Must include: edge layer, CDN/WAF, API GW, networking layer, compute layer, data stores, caches, queues/streams, observability tooling, CI/CD systems.
-- All arrows labelled with protocol or data type.
-- Show failover/DR paths if relevant.
-- ASCII must be aligned and readable in a text editor without wrapping.
+# 2) 🧱 High-Level Architecture Diagram (ASCII/Markdown)
+- Must include: edge (CDN/WAF), API GW, networking, compute, storage, caches, queues/streams, observability, CI/CD.
+- All arrows labelled with protocols/data types.
+- Show failover & DR paths if relevant.
+- ASCII must be aligned and readable in text editors.
 
-# 3) 🛠️ Recommended Services and Tools (by layer, with Alternatives)
-For each major layer (Networking, Compute, Data, Messaging, Caching, IAM/Security, Observability, Edge, Governance):
-- Present a **3-option comparison table**:
-  | Option | Pros | Cons | Est. Monthly Cost | Ops Complexity (L/M/H) |
-- Highlight the recommended choice and why.
+# 3) 🛠️ Recommended Services and Tools (with Alternatives)
+For each major layer:
+| Layer | Option | Pros | Cons | Est. Monthly Cost | Ops Complexity (L/M/H) |
+Highlight the **recommended option** with strategic justification.
 
-# 4) 🧾 Infrastructure as Code Scaffold (multi-file)
-- Full production-quality IaC with realistic values/placeholders.
-- Start each file section with: `### filename.ext` followed by fenced code block.
+# 4) 📁 Infrastructure-as-Code Scaffold (multi-file)
+- Full production-quality IaC with realistic placeholders.
+- Start each file with: `### filename.ext` then fenced code block.
 - Include:
   {% if cloud == 'aws' %}
-  - Terraform for VPC, subnets, {{ 'EKS' if is_k8s else ('Lambda/ECS' if is_serverless else 'ECS/EC2') }}, SGs, IAM, ALB/NLB, relevant managed services.
+  - Terraform for VPC, subnets, {{ 'EKS' if is_k8s else ('Lambda/ECS' if is_serverless else 'ECS/EC2') }}, IAM, ALB/NLB, managed services.
   {% elif cloud == 'azure' %}
   - Terraform/Bicep for VNet, subnets, {{ 'AKS' if is_k8s else ('Functions/App Service' if is_serverless else 'App Service/VMSS') }}, NSGs, Managed Identity, Key Vault.
   {% elif cloud == 'gcp' %}
   - Terraform for VPC, subnets, {{ 'GKE' if is_k8s else ('Cloud Functions/Run' if is_serverless else 'GCE/Cloud Run') }}, firewall, IAM, CMEK.
   {% else %}
-  - Generic Terraform and Kubernetes manifests/Helm as applicable.
+  - Generic Terraform + Kubernetes manifests/Helm.
   {% endif %}
   {% if is_k8s %}
-  - Cluster addons: CNI, ingress, autoscaler, metrics server, RBAC, NetworkPolicies.
-  - Optional: Service Mesh config if zero-trust.
+  - Cluster addons: CNI, ingress, autoscaler, metrics, RBAC, NetworkPolicies, service mesh (if zero-trust).
   {% endif %}
-- Include CI/CD pipeline definitions for relevant tooling.
+- CI/CD pipeline definitions for IaC + apps.
 
-# 5) 🔐 Security, IAM, Compliance & Networking Best Practices
-- Detailed identity architecture: least privilege, short-lived creds, workload identity federation.
-- Network segmentation and egress restrictions.
-- Secrets encryption with KMS/Key Vault/CMEK.
-- Explicit mapping to Zero Trust principles.
+# 5) 🔐 Security, IAM & Compliance
+- Identity architecture: least privilege, workload identity federation.
+- Secrets management (Vault, AWS Secrets Manager, Key Vault).
+- Encryption: KMS, CMEK, HSM-backed keys.
+- Zero Trust principles: segmentation, egress restrictions.
+- Insider threat & rotation policies.
+- Compliance mappings (CIS, NIST, ISO, PCI, HIPAA, GDPR).
 
-# 6) 📦 CI/CD Strategy (with policy & security gates)
-- End-to-end pipeline steps with tools.
-- Automated IaC scanning, container scanning, SAST, DAST, SBOM generation, signing.
-- Progressive delivery strategy (blue/green, canary).
-- Supply chain security (Sigstore, SLSA compliance).
+# 6) 🚦 CI/CD Strategy (with Policy & Security Gates)
+- Full end-to-end pipeline steps.
+- Automated scans: IaC (Checkov/TFSec), containers (Trivy/Grype), code (SAST/DAST).
+- SBOM generation & signing (Sigstore).
+- Progressive delivery (canary, blue/green).
+- Supply chain security (SLSA L3+ targets).
 
 # 7) 🔭 Observability, Reliability & SRE Targets
-- Golden signals and alert thresholds.
-- SLOs with error budgets.
-- Distributed tracing setup.
-- Chaos and DR testing cadence.
+- Golden signals, thresholds, alerting rules.
+- Error budgets with burn-rate policies.
+- Distributed tracing, centralised logging.
+- Chaos engineering playbook: monthly failure injection, quarterly region failover drills.
+- DR Runbook: RTO/RPO tested cadence.
 
-# 8) 💸 Cost Optimisation (FinOps)
-- Rightsizing strategies, discount programs ({{ 'Savings Plans' if cloud == 'aws' else 'Reserved/Committed Use' }}).
-- Storage lifecycle policies.
-- Cost allocation and anomaly detection tooling.
+# 8) 💸 FinOps & ROI Forecast
+- 12-month TCO forecast for 2–3 architectures.
+- Cost allocation & anomaly detection.
+- Rightsizing + discount program usage ({{ 'Savings Plans' if cloud == 'aws' else 'Reserved/Committed Use' }}).
+- Explicit ROI analysis: capex vs opex, breakeven points.
 
-# 9) 🧰 Benchmarks, Frameworks & Controls Mapping
-- Map to at least 2 frameworks per control (e.g., CIS + NIST, NIST + ISO 27001).
-- Containers/K8s: CIS benchmarks, NSA/CISA hardening.
-- Data/AI (if relevant): DAMA, NIST AI RMF.
+# 9) 🔮 Future-Proofing & Emerging Patterns
+- Include at least 2–3 next-gen approaches:
+  - WASM at the edge for portability.
+  - Confidential Computing for regulated workloads.
+  - Event-driven data mesh for analytics-heavy orgs.
+  - AI/MLOps integration for predictive scaling.
+- Strategic view: how this architecture evolves in 12–24 months.
 
 # 10) ⚠️ Risks, Trade-offs & Alternatives
 - Top 5 risks with mitigations.
-- Alternative architectures and their trade-offs.
+- Alternative architectures (e.g., serverless vs. k8s) with trade-offs in cost, speed, ops.
 
-# 11) 📚 Evidence & Compliance Matrix
-| Control/Benchmark | Scope | Implementation/Evidence | Automated Check (Tool) | Frequency/Owner | Framework Mapping |
-|---|---|---|---|---|---|
+# 11) 📚 Compliance & Control Matrix
+| Control/Benchmark | Scope | Implementation/Evidence | Automated Check | Frequency/Owner | Framework Mapping |
+- Must map to at least 2 frameworks (CIS+NIST, NIST+ISO, PCI+GDPR).
 
-# 12) 🧾 Infrastructure as Code — Code Section ONLY
-- Output the full scaffold as per section 4 formatting.
+# 12) 📜 Infrastructure-as-Code — Full Code Section
+- Repeat complete IaC scaffold here, grouped by filename, in code blocks.
 
 # 13) 🏁 Executive Sign-Off
-- One-paragraph strategic closing:
-  - Reassure executives of business alignment.
-  - Emphasise scalability, adaptability, ROI.
-  - Recommend immediate approval.
+- Final strategic recommendation.
+- Emphasise scalability, adaptability, ROI.
+- Tie back to business KPIs & market positioning.
+- Recommend immediate approval.
