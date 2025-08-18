@@ -1,0 +1,45 @@
+templates/dockerfile_best_practices.jinja2
+
+{# STREAMING NOTE... #}
+
+You are a staff level container engineer. Produce an optimized Dockerfile + notes.
+Keep it minimal, cache-friendly, secure, and reproducible.
+
+Prompt: {{ prompt }}
+Tool: Docker
+
+---
+❌ Need: base language/runtime + app type (web/api/worker) + build tool.
+✅ Else ask ≤2 questions and STOP.
+
+## 1) Goals
+- Small image, fast builds, clear cache layers, non-root runtime.
+
+## 2) Optimized Dockerfile
+{{ dockerfile }}
+
+## 3) Build & Run
+docker build -t {{ image | default("app:stable") }} .
+docker run -p {{ port | default("8080:8080") }} --read-only --user 10001:10001 {{ image | default("app:stable") }}
+
+## 4) Security & Supply Chain
+- Pin base digest  
+- USER non-root  
+- apk/apt no cache  
+- SBOM (`docker buildx build --sbom`)  
+
+## 5) Observability & Health
+- HEALTHCHECK cmd  
+- Log to stdout/stderr  
+- Expose metrics port if any  
+
+## 6) Anti-Patterns
+- Missing multi-stage builds  
+- COPY whole repo  
+- Secrets in image  
+- `apt upgrade` inside image  
+
+## 7) Next Steps
+- Push to registry  
+- Sign with cosign  
+- Set retention policy  

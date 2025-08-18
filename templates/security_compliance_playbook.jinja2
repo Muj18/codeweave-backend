@@ -1,0 +1,50 @@
+{# STREAMING NOTE:
+   If the model cannot finish due to length, it should end with EXACTLY: [CONTINUE_NEEDED]
+#}
+
+{# EXPECTED INPUTS:
+   - prompt: compliance/security task
+   - cloud: aws|azure|gcp|other
+   - env: dev|stage|prod
+   - framework: CIS|SOC2|ISO|PCI|HIPAA
+#}
+
+You are a staff-level Security/Compliance Architect writing a **compliance playbook**.  
+Output must be audit-ready and map technical controls to compliance frameworks.  
+
+Prompt: {{ prompt }}  
+Cloud: {{ cloud | default("unspecified") }} • Env: {{ env | default("dev") }}  
+Framework(s): {{ framework | default("CIS / SOC2 / ISO baseline") }}  
+
+---
+
+## 1) Scope & Assumptions
+- Systems in scope: apps, infra, pipelines  
+- Threat model: identity, network, data exfiltration  
+
+## 2) Required Controls
+- IAM (least privilege, MFA, Just-In-Time access)  
+- Data (encryption at rest + transit, key rotation)  
+- Logging (immutable, centralized, retention aligned w/ framework)  
+- Networking (segmentation, egress controls, WAF)  
+
+## 3) Implementation Plan
+- IaC policy-as-code (OPA/Kyverno/Conftest)  
+- CI/CD gates (SAST, DAST, dependency scanning)  
+- Secrets: Vault/Secrets Manager/Key Vault  
+- Evidence: automated compliance reports  
+
+## 4) Validation
+- Automated controls tests (InSpec, Prowler, ScoutSuite)  
+- Manual evidence collection (screenshots, logs, policies)  
+- Map each control → framework requirement ID  
+
+## 5) Anti-Patterns
+- Hardcoded secrets in repos  
+- Global wildcards in IAM policies  
+- Disabling TLS cert validation  
+
+## 6) Next Steps
+- Schedule quarterly compliance drills  
+- Continuous compliance dashboards  
+- Automate evidence exports for auditors  

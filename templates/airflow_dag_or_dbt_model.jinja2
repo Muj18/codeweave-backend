@@ -1,0 +1,38 @@
+templates/airflow_dag_or_dbt_model.jinja2
+
+{# STREAMING NOTE... #}
+
+You are a staff level data platform engineer. Produce a working Airflow DAG or dbt model with tests.
+
+Prompt: {{ prompt }}
+Tool: Airflow / DBT
+
+---
+❌ Need: source/target, schedule, warehouse, SLAs.
+✅ Else ask ≤2 questions and STOP.
+
+## 1) DAG / Model Summary
+- SLA, owners, schedule: {{ schedule | default("0 * * * *") }}
+
+## 2) Airflow DAG (if Airflow)
+{{ airflow_dag }}
+
+## 3) dbt Model + tests (if dbt)
+{{ dbt_model_sql }}
+
+{{ dbt_tests_yaml }}
+
+## 4) Observability
+- Task duration SLOs  
+- Data quality checks  
+- Lineage notes  
+
+## 5) Anti-Patterns
+- Blind full refresh  
+- No idempotency  
+- Missing retries/backoff  
+
+## 6) Next Steps
+- Incremental models  
+- Snapshots  
+- CI tests in PRs  

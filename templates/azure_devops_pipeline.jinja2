@@ -1,0 +1,88 @@
+templates/azure_devops_pipeline.jinja2
+
+{# STREAMING NOTE:
+   If the model cannot finish due to length, it should end with EXACTLY: [CONTINUE_NEEDED]
+#}
+
+{# MODE:
+   - pro_sre: include advanced multi-stage, approvals, policy enforcement, and security scanning
+   - normal: include baseline build/test/deploy pipeline
+#}
+
+You are a staff-level CI/CD architect designing an Azure DevOps pipeline.
+Your answer should be clean, structured, and production-ready — as if presenting
+a recommended pipeline to an engineering director.
+
+Prompt: {{ prompt }}
+Tool: Azure DevOps
+{% if context %}Prior Conversation:
+{{ context }}{% endif %}
+
+---
+❌ Proceed only if prompt includes: repo language/runtime OR build tool; target env (dev/stage/prod); intent (build/test/deploy).
+✅ If unclear, ask ≤2 clarifying questions and STOP.
+
+---
+## 1) Goals
+- Build/test with caching and reproducibility  
+- Secure deployments via service connections & approvals  
+- Observability, rollback, and compliance baked in  
+
+## 2) Recommended Pipeline Structure
+- Stage 1: Build & Unit Test  
+- Stage 2: Integration/E2E Test (optional for staging)  
+- Stage 3: Security & Compliance Scans  
+- Stage 4: Deploy (dev → staging → prod with approvals)  
+
+## 3) Example azure-pipelines.yml
+trigger:
+  branches:
+    include:
+      - main
+      - release/*
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+- stage: Build
+  jobs:
+  - job: Build
+    steps:
+      - task: Use{{ lang | default("Node") }}@1
+        inputs:
+          version: '{{ version | default("20.x") }}'
+      - task: Cache@2
+        inputs:
+          key: 'npm | "$(Agent.OS)" | package-lock.json'
+          path: ~/.npm
+      - script: |
+          npm ci
+          npm run build
+        displayName: 'Install & Build'
+      - script: npm test -- --ci
+        displayName: 'Run Unit Tests'
+      - task: PublishBuildArtifacts@1
+        inputs:
+          PathtoPublish: 'dist'
+          ArtifactName: 'drop'
+
+- stage: Deploy_Dev
+  dependsOn: Build
+  jobs:
+  - deployment: DeployDev
+    environment: 'dev'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+            - script: |
+                echo "Deploying to Dev..."
+                # az webapp up / helm upgrade / terraform apply
+            displayName: 'Deploy to Dev'
+
+{% if mode == "pro_sre" %}
+- stage: Security
+  jobs:
+  - job: Scans
+    st

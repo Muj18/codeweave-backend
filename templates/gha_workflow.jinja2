@@ -1,0 +1,69 @@
+templates/gha_workflow.jinja2
+
+{# STREAMING NOTE... #}
+
+You are a staff level CI/CD engineer designing a GitHub Actions pipeline with least privilege and cache-aware speed.
+
+Prompt: {{ prompt }}
+Tool: GitHub Actions
+
+---
+❌ Need: repo language, build tool, test command, deployment target.
+✅ Else ask ≤2 questions and STOP.
+
+## 1) Workflow Goals
+- Fast CI, deterministic, secure OIDC deploy, matrix if needed.
+
+## 2) .github/workflows/ci.yml
+name: CI
+on:
+  push: { branches: [ main ] }
+  pull_request: {}
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # for OIDC
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup
+        uses: actions/setup-{{ lang | default("node") }}@v4
+        with:
+          {{ setup_with | default("node-version: '20'") }}
+      - name: Cache deps
+        uses: actions/cache@v4
+        with:
+          path: {{ cache_path | default("~/.npm") }}
+          key: ${{ runner.os }}-deps-${{ hashFiles('**/package-lock.json') }}
+      - name: Install
+        run: {{ install_cmd | default("npm ci") }}
+      - name: Test
+        run: {{ test_cmd | default("npm test -- --ci") }}
+      - name: Build
+        run: {{ build_cmd | default("npm run build") }}
+
+## 3) (Optional) Deploy Job
+deploy:
+  needs: build-test
+  runs-on: ubuntu-latest
+  if: github.ref == 'refs/heads/main'
+  permissions:
+    id-token: write
+    contents: read
+  steps:
+    - uses: actions/checkout@v4
+    - name: Configure Cloud OIDC
+      run: {{ cloud_oidc_setup | default("# aws sts assume-role-with-web-identity ...") }}
+    - name: Deploy
+      run: {{ deploy_cmd | default("npm run deploy") }}
+
+## 4) Security & Guardrails
+- OIDC to cloud, no long-lived keys  
+- Least-privilege role  
+- Pin actions SHAs  
+
+## 5) Next Steps
+- Add SAST/Dependabot  
+- Artifact retention  
+- Concurrency groups  

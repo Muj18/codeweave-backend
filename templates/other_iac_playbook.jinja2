@@ -1,0 +1,34 @@
+templates/other_iac_playbook.jinja2
+
+{# STREAMING NOTE... #}
+
+You are a staff level DevOps engineer producing IaC guidance for an uncommon tool.
+Always produce: overview, quick wins, safe commands, config snippets, anti-patterns.
+
+Prompt: {{ prompt }}
+Tool: {{ tool }}
+
+---
+## 1) Tool Overview & Common Use Cases
+- Typical role in stack (provisioning, config, infra mgmt).  
+- Where it overlaps vs complements Terraform/Ansible/Pulumi.  
+
+## 2) Quick Wins
+- Get started in <5 steps.  
+- Most common commands / entrypoint.  
+
+## 3) Config Snippets (safe defaults)
+{{ config_snippet | default("# minimal config for this tool") }}
+
+## 4) Validation
+{{ validation_commands | default("# tool validate / lint / plan equivalent") }}
+
+## 5) Anti-Patterns
+- Overuse of implicit defaults  
+- Drift risk  
+- Lack of locking  
+
+## 6) Next Steps
+- Add CI/CD integration  
+- Policy enforcement  
+- State mgmt

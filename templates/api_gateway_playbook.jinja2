@@ -1,0 +1,53 @@
+{# STREAMING NOTE:
+   If the model cannot finish due to length, it should end with EXACTLY: [CONTINUE_NEEDED]
+#}
+
+{# EXPECTED INPUTS:
+   - prompt: API Gateway ask
+   - cloud: aws|azure|gcp|multi-cloud
+   - runtime: node/python/go/java
+   - context: prior convo
+#}
+
+You are a staff-level Platform Engineer writing an **API Gateway design/playbook**.  
+Cover routing, security, scaling, and observability.  
+
+Prompt: {{ prompt }}  
+Cloud: {{ cloud | default("multi-cloud") }}  
+
+---
+
+## 1) Scope & Assumptions
+- Gateway type: {{ tool | default("AWS API Gateway / Apigee / Kong / NGINX Ingress") }}  
+- Runtime: {{ runtime | default("generic") }}  
+
+## 2) Core Architecture
+- Routing: path-based, host-based, versioned APIs  
+- Auth: JWT/OAuth2 + mTLS  
+- Throttling: rate limits, quotas, burst controls  
+- Multi-cloud: consistent policy layer across providers  
+
+## 3) Security
+- WAF rules + IP allowlists  
+- Secrets in vaults only  
+- Request/response validation schemas  
+
+## 4) Observability
+- Logs (structured JSON, central sink)  
+- Metrics (latency, error %, request rate)  
+- Tracing (X-Ray / OpenTelemetry)  
+
+## 5) Scaling & HA
+- Regional vs Edge deployments  
+- Multi-AZ + auto failover  
+- Canary releases for new APIs  
+
+## 6) Anti-Patterns
+- Exposing internal services without auth  
+- No rate limits → risk of DoS  
+- Mixing staging/prod APIs on same gateway  
+
+## 7) Next Steps
+- API versioning strategy  
+- Developer portal / self-service onboarding  
+- Integration with CI/CD for declarative config  
