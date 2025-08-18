@@ -1,6 +1,0 @@
-### Kubernetes Core
-- Check OOMKilled/CrashLoopBackOff/ImagePullBackOff in `kubectl describe pod`.
-- Probes: readiness path/port/timeouts; avoid mismatches with LB.
-- Minimal patch: requests {512Mi/500m}, limits {1Gi/1}; set readiness `/ready`, liveness `/health`.
-- HPA: sane min/max; add downscale stabilization; ensure Cluster Autoscaler can add nodes.
-- Safe rollout: `kubectl rollout restart` or canary/blue-green (Argo Rollouts).
