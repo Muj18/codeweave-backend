@@ -217,8 +217,10 @@ async def stream_paged_completion(model: str, system_guard: str, initial_user_co
 async def generate_code(req: PromptRequest):
     print("DEBUG Request Payload:", req.dict())
 
-    # Look up template from mapping file
-    template_name = TEMPLATE_MAP.get(req.tool)
+    # --- Normalize tool key to lowercase for safe lookup ---
+    tool_key = (req.tool or "").strip().lower()
+    template_map_normalized = {k.lower(): v for k, v in TEMPLATE_MAP.items()}
+    template_name = template_map_normalized.get(tool_key)
 
     # If not found, default to solutions_architecture
     if not template_name:
@@ -247,10 +249,9 @@ async def generate_code(req: PromptRequest):
     # Select model & token budget
     if (req.plan or "free").lower() == "free":
         model = "gpt-3.5-turbo"
-        desired_cap = 3000  # conservative for free users
+        desired_cap = 3000
     else:
         model = "gpt-4o"
-        # For Pro, use almost full available tokens minus safety buffer
         prompt_tokens = count_tokens(model, rendered_prompt)
         desired_cap = max(3500, safe_max_tokens(model, rendered_prompt, desired_cap=12000, buffer=200))
 

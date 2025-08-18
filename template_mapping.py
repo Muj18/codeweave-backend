@@ -13,17 +13,17 @@ TEMPLATE_MAP = {
     "others (iac / automation)": "other_iac_playbook.jinja2",
 
     # Kubernetes & Containers
-    "docker": "dockerfile_best_practices.jinja2",
     "kubernetes": "k8s_playbook.jinja2",
+    "docker": "dockerfile_best_practices.jinja2",
     "helm": "helm_chart_helper.jinja2",
     "istio": "istio_policy_helper.jinja2",
     "openshift": "openshift_admin_helper.jinja2",
     "others (containers)": "other_universal_playbook.jinja2",
 
     # Code & Scripts
+    "bash": "code_generation.jinja2",
     "python": "code_generation.jinja2",
     "go": "code_generation.jinja2",
-    "bash": "code_generation.jinja2",
     "typescript": "code_generation.jinja2",
     "javascript": "code_generation.jinja2",
     "java": "code_generation.jinja2",
@@ -34,22 +34,22 @@ TEMPLATE_MAP = {
     "other (script/code)": "other_code_playbook.jinja2",
 
     # AI & GenAI
-    "genai pipelines (langchain + vector db + rag)": "genai_architecture.jinja2",
-    "model fine-tuning (custom llms)": "genai_architecture.jinja2",
-    "llm deployment (serve models in production)": "genai_architecture.jinja2",
-    "amazon bedrock (serverless multi-model ai on aws)": "genai_architecture.jinja2",
-    "vertex ai / sagemaker (cloud ai platforms)": "genai_architecture.jinja2",
+    "genai pipelines": "genai_architecture.jinja2",
+    "model fine-tuning": "genai_architecture.jinja2",
+    "llm deployment": "genai_architecture.jinja2",
+    "amazon bedrock": "genai_architecture.jinja2",
+    "vertex ai / sagemaker": "genai_architecture.jinja2",
     "others (ai)": "other_universal_playbook.jinja2",
 
     # Data & MLOps
-    "data engineering (merged data architect + etl pipeline)": "data_architecture.jinja2",
+    "data engineering": "data_architecture.jinja2",
+    "mlops": "mlops_architecture.jinja2",
     "data lake": "data_architecture.jinja2",
     "airflow / dbt": "airflow_dag_or_dbt_model.jinja2",
-    "mlops": "mlops_architecture.jinja2",
     "others (data)": "other_universal_playbook.jinja2",
 
     # Troubleshooting
-    "troubleshooting (merged error diagnosis into this)": "troubleshooting.jinja2",
+    "troubleshooting": "troubleshooting.jinja2",
     "file upload analyzer": "troubleshooting.jinja2",
 
     # CI/CD & Platform Automation
