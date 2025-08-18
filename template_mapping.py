@@ -1,72 +1,72 @@
 TEMPLATE_MAP = {
     # Cloud & Infrastructure
-    "AWS": "solutions_architecture.jinja2",
-    "Azure": "solutions_architecture.jinja2",
-    "GCP": "solutions_architecture.jinja2",
-    "Others (Infra)": "solutions_architecture.jinja2",
+    "aws": "solutions_architecture.jinja2",
+    "azure": "solutions_architecture.jinja2",
+    "gcp": "solutions_architecture.jinja2",
+    "others (infra)": "solutions_architecture.jinja2",
 
     # Infrastructure as Code & Automation
-    "Terraform": "solutions_architecture.jinja2",
-    "AWS CloudFormation": "solutions_architecture.jinja2",
-    "Pulumi": "solutions_architecture.jinja2",
-    "Ansible": "solutions_architecture.jinja2",
-    "Others (IaC / Automation)": "solutions_architecture.jinja2",
+    "terraform": "terraform_playbook.jinja2",
+    "aws cloudformation": "cloudformation_snippet.jinja2",
+    "pulumi": "pulumi_snippet.jinja2",
+    "ansible": "ansible_playbook.jinja2",
+    "others (iac / automation)": "other_iac_playbook.jinja2",
 
     # Kubernetes & Containers
-    "Docker": "solutions_architecture.jinja2",
-    "Kubernetes": "solutions_architecture.jinja2",
-    "Helm": "solutions_architecture.jinja2",
-    "Istio": "solutions_architecture.jinja2",
-    "OpenShift": "solutions_architecture.jinja2",
-    "Others (Containers)": "solutions_architecture.jinja2",
+    "docker": "dockerfile_best_practices.jinja2",
+    "kubernetes": "k8s_playbook.jinja2",
+    "helm": "helm_chart_helper.jinja2",
+    "istio": "istio_policy_helper.jinja2",
+    "openshift": "openshift_admin_helper.jinja2",
+    "others (containers)": "other_universal_playbook.jinja2",
 
     # Code & Scripts
-    "Python": "code_generation.jinja2",
-    "Go": "code_generation.jinja2",
-    "Bash": "code_generation.jinja2",
-    "TypeScript": "code_generation.jinja2",
-    "JavaScript": "code_generation.jinja2",
-    "Java": "code_generation.jinja2",
-    "C#": "code_generation.jinja2",
-    "Rust": "code_generation.jinja2",
-    "PowerShell": "code_generation.jinja2",
-    "Shell Script": "code_generation.jinja2",
-    "Other (Script/Code)": "code_generation.jinja2",
+    "python": "code_generation.jinja2",
+    "go": "code_generation.jinja2",
+    "bash": "code_generation.jinja2",
+    "typescript": "code_generation.jinja2",
+    "javascript": "code_generation.jinja2",
+    "java": "code_generation.jinja2",
+    "c#": "code_generation.jinja2",
+    "rust": "code_generation.jinja2",
+    "powershell": "code_generation.jinja2",
+    "shell script": "code_generation.jinja2",
+    "other (script/code)": "other_code_playbook.jinja2",
 
     # AI & GenAI
-    "GenAI Pipelines (LangChain + Vector DB + RAG)": "genai_architecture.jinja2",
-    "Model Fine-Tuning (custom LLMs)": "genai_architecture.jinja2",
-    "LLM Deployment (serve models in production)": "genai_architecture.jinja2",
-    "Amazon Bedrock (serverless multi-model AI on AWS)": "genai_architecture.jinja2",
-    "Vertex AI / SageMaker (cloud AI platforms)": "genai_architecture.jinja2",
-    "Others (AI)": "genai_architecture.jinja2",
+    "genai pipelines (langchain + vector db + rag)": "genai_architecture.jinja2",
+    "model fine-tuning (custom llms)": "genai_architecture.jinja2",
+    "llm deployment (serve models in production)": "genai_architecture.jinja2",
+    "amazon bedrock (serverless multi-model ai on aws)": "genai_architecture.jinja2",
+    "vertex ai / sagemaker (cloud ai platforms)": "genai_architecture.jinja2",
+    "others (ai)": "other_universal_playbook.jinja2",
 
     # Data & MLOps
-    "Data Engineering (merged Data Architect + ETL Pipeline)": "data_architecture.jinja2",
-    "Data Lake": "data_architecture.jinja2",
-    "Airflow / DBT": "data_architecture.jinja2",
-    "MLOps": "mlops_architecture.jinja2",
-    "Others (Data)": "mlops_architecture.jinja2",
+    "data engineering (merged data architect + etl pipeline)": "data_architecture.jinja2",
+    "data lake": "data_architecture.jinja2",
+    "airflow / dbt": "airflow_dag_or_dbt_model.jinja2",
+    "mlops": "mlops_architecture.jinja2",
+    "others (data)": "other_universal_playbook.jinja2",
 
     # Troubleshooting
-    "Troubleshooting (merged Error Diagnosis into this)": "troubleshooting.jinja2",
-    "File Upload Analyzer": "troubleshooting.jinja2",
+    "troubleshooting (merged error diagnosis into this)": "troubleshooting.jinja2",
+    "file upload analyzer": "troubleshooting.jinja2",
 
     # CI/CD & Platform Automation
-    "GitHub Actions": "solutions_architecture.jinja2",
-    "GitLab CI/CD": "solutions_architecture.jinja2",
-    "Azure DevOps": "solutions_architecture.jinja2",
-    "ArgoCD": "solutions_architecture.jinja2",
-    "Jenkins": "solutions_architecture.jinja2",
-    "Observability": "solutions_architecture.jinja2",
-    "Security & Compliance": "solutions_architecture.jinja2",
-    "Cost Optimization": "solutions_architecture.jinja2",
-    "Cloud Migrations": "solutions_architecture.jinja2",
+    "github actions": "gha_workflow.jinja2",
+    "gitlab ci/cd": "gitlab_ci_pipeline.jinja2",
+    "azure devops": "azure_devops_pipeline.jinja2",
+    "argocd": "argocd_appset_helper.jinja2",
+    "jenkins": "jenkinsfile_helper.jinja2",
+    "observability": "observability_runbook.jinja2",
+    "security & compliance": "security_compliance_playbook.jinja2",
+    "cost optimization": "cost_quick_wins.jinja2",
+    "cloud migrations": "migration_playbook.jinja2",
 
     # Misc / Other
-    "API Gateway Templates": "solutions_architecture.jinja2",
-    "Other": "solutions_architecture.jinja2",
+    "api gateway templates": "api_gateway_playbook.jinja2",
+    "other": "other_universal_playbook.jinja2",
 
     # Platform Audit
-    "Platform Audit": "platform_audit.jinja2"
+    "platform audit": "platform_audit.jinja2"
 }
