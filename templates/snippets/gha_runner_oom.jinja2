@@ -1,0 +1,21 @@
+
+---
+
+## 🔹 `/snippets/gha_runner_oom.jinja2`
+```jinja2
+## CI/CD Runner Out of Memory
+**Symptom:** Build job killed, `Exit code 137`  
+
+### Likely Causes
+- Large Docker build layers  
+- Insufficient GitHub runner memory  
+- No cleanup of caches  
+
+### Fix
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build Docker Image
+        run: docker build --memory=4g -t myapp .

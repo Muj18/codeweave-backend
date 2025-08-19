@@ -1,0 +1,24 @@
+
+---
+
+## 🔹 `/snippets/terraform_state_lock.jinja2`
+```jinja2
+## Terraform State Lock Contention
+**Symptom:** `Error acquiring the state lock`  
+
+### Likely Causes
+- Parallel applies  
+- DynamoDB capacity too low  
+- Stale lock entry  
+
+### Fix
+```hcl
+terraform {
+  backend "s3" {
+    bucket         = "tf-state-bucket"
+    key            = "prod/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "tf-locks"
+    lock_timeout   = "600s"
+  }
+}

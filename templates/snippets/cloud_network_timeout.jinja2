@@ -1,0 +1,23 @@
+
+---
+
+## 🔹 `/snippets/cloud_network_timeout.jinja2`
+```jinja2
+## Cloud Networking / Timeout
+**Symptom:** Services unreachable, `ConnectionTimeout` errors.  
+
+### Likely Causes
+- Missing VPC route or SG/NSG firewall  
+- Wrong ALB/ELB target group health check  
+- Service mesh misrouting  
+
+### Fix
+```yaml
+# AWS SG Ingress Rule
+resource "aws_security_group_rule" "allow_http" {
+  type        = "ingress"
+  from_port   = 80
+  to_port     = 80
+  protocol    = "tcp"
+  cidr_blocks = ["0.0.0.0/0"]
+}

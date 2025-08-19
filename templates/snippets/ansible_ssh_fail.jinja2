@@ -1,0 +1,18 @@
+
+---
+
+## 🔹 `/snippets/ansible_ssh_fail.jinja2`
+```jinja2
+## Ansible SSH Failure
+**Symptom:** `Permission denied`, unreachable host.  
+
+### Likely Causes
+- Wrong SSH key  
+- Missing user in inventory  
+- Firewall port 22 blocked  
+
+### Fix
+```yaml
+# Inventory Example
+[web]
+10.0.0.5 ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/prod.pem

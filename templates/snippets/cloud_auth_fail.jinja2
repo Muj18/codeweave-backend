@@ -1,0 +1,22 @@
+## Cloud Auth / IAM Failure
+**Symptom:** `AccessDenied`, `Unauthorized`, or expired credentials.  
+
+### Likely Causes
+- IAM policy missing action (`ec2:DescribeInstances`, `s3:GetObject`, etc.)
+- Expired/rotated key, stale token
+- Wrong ServiceAccount binding (K8s/GCP/Azure)  
+
+### Fix
+```hcl
+# Terraform IAM Policy Snippet
+resource "aws_iam_policy" "read_only" {
+  name   = "read_only_access"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["s3:GetObject"]
+      Resource = "*"
+    }]
+  })
+}

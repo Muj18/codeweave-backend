@@ -1,0 +1,35 @@
+
+---
+
+## 🔹 `/snippets/db_connection_fail.jinja2`
+```jinja2
+## Database Connection Failure
+**Symptom:** `ECONNREFUSED`, auth errors  
+
+### Likely Causes
+- Wrong DB creds  
+- Network SG/NSG blocked  
+- Connection pool exhausted  
+
+### Fix
+```yaml
+# Example K8s Secret + Deployment
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-creds
+stringData:
+  username: admin
+  password: securepass
+---
+env:
+- name: DB_USER
+  valueFrom:
+    secretKeyRef:
+      name: db-creds
+      key: username
+- name: DB_PASS
+  valueFrom:
+    secretKeyRef:
+      name: db-creds
+      key: password

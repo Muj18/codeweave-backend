@@ -1,0 +1,20 @@
+
+---
+
+## 🔹 `/snippets/llm_timeout.jinja2`
+```jinja2
+## LLM Service Timeout
+**Symptom:** Requests >30s, API 504s  
+
+### Likely Causes
+- Model too large for instance type  
+- GPU/TPU saturation  
+- No retry logic  
+
+### Fix
+```python
+# FastAPI timeout + retry
+@app.post("/chat")
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(2))
+async def chat(req: ChatRequest):
+    return await model.generate(req.prompt, timeout=25)

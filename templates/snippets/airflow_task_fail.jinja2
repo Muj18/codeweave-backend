@@ -1,0 +1,21 @@
+
+---
+
+## 🔹 `/snippets/airflow_task_fail.jinja2`
+```jinja2
+## Airflow DAG Task Failure
+**Symptom:** Task retries exhausted  
+
+### Likely Causes
+- Wrong dependency order  
+- Bad connection string  
+- Misconfigured retries  
+
+### Fix
+```python
+task = BashOperator(
+    task_id="extract_data",
+    bash_command="python extract.py",
+    retries=3,
+    retry_delay=timedelta(minutes=5)
+)
