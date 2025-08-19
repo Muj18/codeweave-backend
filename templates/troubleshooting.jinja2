@@ -50,6 +50,22 @@ List **2–4 plausible causes**, ranked.
 - Readiness/liveness probes, DB connection pools, retry policies, timeouts  
 - Resource requests/limits, LB ↔ readiness sync, TLS/Cert validation  
 
+---
+
+## 2b) Corrected Config Snippets (Apply-Ready)
+When config-level issues are suspected, output **apply-ready YAML or IaC**:
+
+- Deployment / StatefulSet manifests
+- Helm values overrides
+- Terraform snippets
+- Ansible playbook fixes
+
+Always include **securityContext**, **probes**, and **resource limits** for K8s.
+If a filesystem or permission error is likely, generate a corrected `Deployment` YAML with proper `volumeMounts`, `fsGroup`, `runAsUser`, etc.
+
+Explain inline (as YAML comments) *why* each change fixes the issue.
+
+
 **Stage 3 — Controlled Changes**  
 - `kubectl rollout restart` / canary or blue-green deployment  
 - Rescale pods/nodes/VMSS/ASG/MIG  
