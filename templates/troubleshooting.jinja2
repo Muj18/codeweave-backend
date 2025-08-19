@@ -22,6 +22,14 @@ Tool Concerned: {{ tool }}
 
 ---
 
+# 🚨 Executive Summary
+- **Impact**: What’s broken & who’s affected (users, teams, pipelines).  
+- **Severity**: Prod / Staging / CI / Dev.  
+- **Current Status**: Service degraded, outage, or intermittent.  
+- **Top Suspects**: Shortlist of 1–2 likely root causes.  
+
+---
+
 # 🛠️ Incident Report & Action Plan
 
 ## 1) Likely Root Cause Hypotheses
@@ -69,6 +77,8 @@ Always annotate with **inline comments**:
 ---
 
 ## 3) Targeted Troubleshooting (Capability-Driven)
+Dynamically load focused snippets based on detected issue keywords:  
+
 {% if mode == "pro_sre" %}
   {% for cap in capabilities %}
   {% include "snippets_pro_sre/" + cap + ".jinja2" ignore missing %}
