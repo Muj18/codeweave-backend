@@ -13,7 +13,8 @@ TEMPLATE_MAP = {
     "others (iac / automation)": "other_iac_playbook.jinja2",
 
     # Kubernetes & Containers
-    "kubernetes": "k8s_playbook.jinja2",
+    "kubernetes_playbook": "k8s_playbook.jinja2",
+    "kubernetes_troubleshoot": "k8s_troubleshoot.jinja2",
     "docker": "dockerfile_best_practices.jinja2",
     "helm": "helm_chart_helper.jinja2",
     "istio": "istio_policy_helper.jinja2",
