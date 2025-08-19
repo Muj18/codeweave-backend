@@ -26,7 +26,7 @@ Tool Concerned: {{ tool }}
 
 ## 1) Likely Root Cause Hypotheses
 For each, provide:  
-- **Layer**: App / Platform / Infra / Data / GenAI  
+- **Layer**: App / Platform / Infra / Data / GenAI / CI/CD  
 - **Rationale**: Why this symptom points here  
 - **Probability**: High / Medium / Low  
 
@@ -36,14 +36,14 @@ List **2–4 plausible causes**, ranked.
 
 ## 2) Prioritized Resolution Path
 **Stage 1 — Fast Triage (minimize MTTR)**  
-- Logs/events: `kubectl logs`, pipeline logs, API traces, model server logs  
+- Logs/events: `kubectl logs`, `terraform plan`, pipeline logs, API traces, model server logs  
 - Metrics: Prometheus, Grafana, CloudWatch, Azure Monitor, GCP Ops  
 - GenAI: LLM latency, token usage, embeddings/vector DB health  
 
 **Stage 2 — Config/Runtime Adjustments**  
 - Probes, retries, timeouts, resource limits, scaling hints  
-- Terraform/Ansible plan validation, idempotency fixes  
-- GenAI: batch size tuning, caching embeddings, retry policies for API calls  
+- Terraform/Ansible validation, idempotency fixes  
+- GenAI: batch size tuning, caching embeddings, retry policies  
 
 **Stage 3 — Controlled Changes**  
 - Safe rollouts: canary, blue/green, pipeline re-runs  
@@ -55,11 +55,11 @@ List **2–4 plausible causes**, ranked.
 ## 2b) Corrected Config / Code Snippets (Apply-Ready)
 When config/code-level issues are suspected, output **apply-ready fixes**:  
 
-- K8s: Deployment YAML (with `securityContext`, probes, resources)  
-- Terraform: module snippet with state-safe fix  
-- Ansible: playbook task patch  
-- CI/CD: fixed workflow YAML snippet  
-- GenAI: RAG pipeline, fine-tuning job, Streamlit/FastAPI app fix  
+- **Kubernetes**: Deployment YAML (with probes/resources/securityContext)  
+- **Terraform**: module snippet with state-safe fix  
+- **Ansible**: playbook patch  
+- **CI/CD**: workflow YAML correction  
+- **GenAI**: RAG pipeline, fine-tuning job, Streamlit/FastAPI app fix  
 
 Always annotate with **inline comments**:  
 - ✅ *why the change fixes it*  
@@ -82,19 +82,19 @@ Always annotate with **inline comments**:
 ---
 
 ## 4) Cloud & Platform Notes
-- **Identity/Permissions:** IAM/ServiceAccounts, secrets in Vault/SM/KeyVault  
-- **Networking:** VPC, SGs, ingress/egress rules, API gateways, service mesh (Istio/Linkerd)  
-- **IaC State:** Backend locks (S3/Dynamo, GCS, Blob), drift detection  
-- **GenAI Infra:** GPU/TPU scheduling, memory leaks, vector DB indexing speed  
-- **CI/CD:** Runner capacity, caching, artifact retention, secrets injection  
+- **Identity/Permissions**: IAM roles, service accounts, Vault/SM/KeyVault  
+- **Networking**: VPC, SGs, ingress/egress, API gateways, service mesh  
+- **IaC State**: Backend locks (S3/Dynamo, GCS, Blob), drift detection  
+- **GenAI Infra**: GPU/TPU scheduling, memory leaks, vector DB indexing speed  
+- **CI/CD**: Runner capacity, caching, artifact retention, secrets injection  
 
 ---
 
 ## 5) Monitoring & Prevention
-- **Infra/Apps:** alerts for 5xx, crashloops, latency, scaling thresholds  
-- **IaC:** drift detection pipelines, tfsec/checkov, policy gates (OPA/Kyverno)  
-- **GenAI:** alerts on model latency, context size errors, RAG retrieval failures  
-- **CI/CD:** flaky test detection, failed job alerts, artifact expiration  
+- **Infra/Apps**: alerts for 5xx, crashloops, latency, scaling thresholds  
+- **IaC**: drift detection pipelines, tfsec/checkov, OPA/Kyverno policies  
+- **GenAI**: alerts on model latency, context size errors, RAG failures  
+- **CI/CD**: flaky test detection, failed job alerts, artifact expiration  
 
 ---
 
@@ -102,18 +102,18 @@ Always annotate with **inline comments**:
 - Hardcoded secrets / plaintext creds  
 - Using `:latest` Docker tags → non-repeatable builds  
 - No probes/resources in prod → instability  
-- Ignoring state lock errors in Terraform/Ansible  
-- GenAI: stuffing long prompts instead of RAG, no guardrails for toxic output  
+- Ignoring Terraform/Ansible state lock errors  
+- GenAI: stuffing long prompts instead of RAG, no guardrails for toxicity  
 - CI/CD: unpinned dependencies, missing retries for flaky APIs  
 
 ---
 
 ## 7) Production Readiness Checklist
 - ✅ Probes + resource limits tuned under load  
-- ✅ Dashboards & alerts live-validated  
+- ✅ Dashboards & alerts validated live  
 - ✅ IaC backend locked + versioned  
-- ✅ CI/CD pipelines idempotent + reproducible  
-- ✅ GenAI apps monitored for latency, token usage, hallucination rate  
+- ✅ CI/CD pipelines idempotent & reproducible  
+- ✅ GenAI monitored for latency, token usage, hallucination rate  
 - ✅ Autoscaling tuned with headroom  
 - ✅ Release strategy enforced (blue/green/canary)  
 
@@ -123,10 +123,10 @@ Always annotate with **inline comments**:
 The **senior engineer mindset**:  
 - **Fast Isolation** → cut noise, find top 1–2 suspects  
 - **Safe Fixes First** → rollbacks, restarts, configs before infra rebuild  
-- **Cross-Domain Awareness** → DevOps + GenAI + CI/CD all interlinked  
-- **Sustainable Prevention** → resilience, monitoring, guardrails, chaos drills  
+- **Cross-Domain Awareness** → DevOps + GenAI + CI/CD interlinked  
+- **Sustainable Prevention** → monitoring, guardrails, chaos drills  
 
 Escalation: pull in **DBAs, Data Eng, ML Eng, NetOps, CloudOps** as evidence dictates.  
-Post-mortem: run **chaos/DR drills** + codify lessons into IaC and pipelines.  
+Post-mortem: run **chaos/DR drills** + codify lessons into IaC/pipelines.  
 
 ---
