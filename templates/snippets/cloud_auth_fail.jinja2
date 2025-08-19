@@ -1,22 +1,28 @@
-## Cloud Auth / IAM Failure
-**Symptom:** `AccessDenied`, `Unauthorized`, or expired credentials.  
+### Cloud Authentication Failure Troubleshooting
 
-### Likely Causes
-- IAM policy missing action (`ec2:DescribeInstances`, `s3:GetObject`, etc.)
-- Expired/rotated key, stale token
-- Wrong ServiceAccount binding (K8s/GCP/Azure)  
+**Key Symptoms**
+- CLI/SDK returns `AuthFailure` or `InvalidClientTokenId`
+- Pipelines fail on `aws sts get-caller-identity` or equivalent
+- Expired credentials in CI/CD secrets store
+- `403 Forbidden` or `401 Unauthorized` from cloud APIs
 
-### Fix
-```hcl
-# Terraform IAM Policy Snippet
-resource "aws_iam_policy" "read_only" {
-  name   = "read_only_access"
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["s3:GetObject"]
-      Resource = "*"
-    }]
-  })
-}
+**Immediate Triage**
+- Run `whoami` equivalent:
+  - AWS: `aws sts get-caller-identity`
+  - Azure: `az account show`
+  - GCP: `gcloud auth list`
+- Check expiry of tokens/keys in secrets manager
+- Confirm service account / IAM role bindings are intact
+- Validate CI/CD pipeline has correct secrets injected
+
+**Safe Fix**
+```bash
+# AWS: refresh session token
+aws configure sso
+aws sts get-caller-identity
+
+# GCP: activate service account
+gcloud auth activate-service-account --key-file=/path/key.json
+
+# Azure: re-login
+az login --service-principal -u <appId> -p <password> --tenant <tenantId>

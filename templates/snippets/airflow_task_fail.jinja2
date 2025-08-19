@@ -1,21 +1,23 @@
+### Airflow Task Failure Troubleshooting
 
----
+**Key Symptoms**
+- Task stuck in `failed` state despite retries
+- Logs show `ModuleNotFoundError` or dependency import errors
+- Downstream tasks blocked due to dependency chain
+- DAG not progressing past failed task
 
-## 🔹 `/snippets/airflow_task_fail.jinja2`
-```jinja2
-## Airflow DAG Task Failure
-**Symptom:** Task retries exhausted  
+**Immediate Triage**
+- Inspect task logs: `airflow logs <dag_id> <task_id>`
+- Validate DAG syntax: `airflow dags list`
+- Confirm worker environment has required Python packages
+- Check Airflow scheduler and worker health
 
-### Likely Causes
-- Wrong dependency order  
-- Bad connection string  
-- Misconfigured retries  
-
-### Fix
+**Safe Fix**
 ```python
-task = BashOperator(
-    task_id="extract_data",
-    bash_command="python extract.py",
-    retries=3,
-    retry_delay=timedelta(minutes=5)
-)
+# Example DAG fix with retries and execution timeout
+default_args = {
+  "retries": 3,
+  "retry_delay": timedelta(minutes=5),
+  "execution_timeout": timedelta(minutes=30),
+  "depends_on_past": False
+}

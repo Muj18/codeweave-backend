@@ -1,24 +1,22 @@
+### Terraform State Lock Troubleshooting
 
----
+**Key Symptoms**
+- `Error acquiring the state lock`
+- `ConditionalCheckFailedException` in DynamoDB
+- Long-running or stuck `terraform apply`
 
-## 🔹 `/snippets/terraform_state_lock.jinja2`
-```jinja2
-## Terraform State Lock Contention
-**Symptom:** `Error acquiring the state lock`  
+**Immediate Triage**
+- Run `terraform plan` to confirm backend access  
+- Check DynamoDB table for stale lock entries (`LockID`)  
+- Ensure no parallel `terraform apply` is running  
 
-### Likely Causes
-- Parallel applies  
-- DynamoDB capacity too low  
-- Stale lock entry  
-
-### Fix
+**Safe Fix**
 ```hcl
 terraform {
   backend "s3" {
-    bucket         = "tf-state-bucket"
-    key            = "prod/terraform.tfstate"
-    region         = "us-east-1"
-    dynamodb_table = "tf-locks"
-    lock_timeout   = "600s"
+    key            = "terraform.tfstate"
+    region         = "us-west-2"
+    dynamodb_table = "terraform_locks"
+    lock_timeout   = "20m" # prevent contention
   }
 }

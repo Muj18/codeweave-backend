@@ -1,23 +1,31 @@
+### Cloud Network Timeout Troubleshooting
 
----
+**Key Symptoms**
+- API calls hang or timeout (HTTP 504 / curl timeout)
+- Pods stuck in `ContainerCreating` due to CNI issues
+- Terraform/Ansible deployment stalls on remote provisioners
+- CI/CD jobs fail on external dependency fetch (pip, apt, docker pull)
 
-## 🔹 `/snippets/cloud_network_timeout.jinja2`
-```jinja2
-## Cloud Networking / Timeout
-**Symptom:** Services unreachable, `ConnectionTimeout` errors.  
+**Immediate Triage**
+- Ping/traceroute target endpoints  
+- Check DNS resolution:
+  - `dig example.com`
+  - `nslookup api.service`  
+- Validate VPC/Subnet routing tables + security groups  
+- Inspect cloud provider status page (AWS/GCP/Azure outages)  
+- For K8s: `kubectl get nodes -o wide` + check CNI DaemonSet logs  
 
-### Likely Causes
-- Missing VPC route or SG/NSG firewall  
-- Wrong ALB/ELB target group health check  
-- Service mesh misrouting  
+**Safe Fix**
+```bash
+# AWS: validate VPC routing
+aws ec2 describe-route-tables --filters Name=vpc-id,Values=<vpc-id>
 
-### Fix
-```yaml
-# AWS SG Ingress Rule
-resource "aws_security_group_rule" "allow_http" {
-  type        = "ingress"
-  from_port   = 80
-  to_port     = 80
-  protocol    = "tcp"
-  cidr_blocks = ["0.0.0.0/0"]
+# Kubernetes CNI restart
+kubectl -n kube-system rollout restart ds aws-node
+
+# Terraform: increase timeouts
+resource "aws_instance" "example" {
+  timeouts {
+    create = "20m"
+  }
 }

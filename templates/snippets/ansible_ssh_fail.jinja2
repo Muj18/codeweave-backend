@@ -1,18 +1,20 @@
+### Ansible SSH Failure Troubleshooting
 
----
+**Key Symptoms**
+- Playbook fails with `UNREACHABLE!` or `Permission denied (publickey)`
+- Long SSH timeouts during task execution
+- Connection refused or host unreachable
+- Works manually via `ssh`, but fails via Ansible
 
-## 🔹 `/snippets/ansible_ssh_fail.jinja2`
-```jinja2
-## Ansible SSH Failure
-**Symptom:** `Permission denied`, unreachable host.  
+**Immediate Triage**
+- Verify inventory file has correct host/IP and user
+- Test SSH manually: `ssh -i ~/.ssh/key user@host`
+- Check that target host’s SSHD is running and accessible
+- Confirm correct private key is configured in `ansible.cfg`
+- Ensure `become` and sudo permissions are valid
 
-### Likely Causes
-- Wrong SSH key  
-- Missing user in inventory  
-- Firewall port 22 blocked  
-
-### Fix
+**Safe Fix**
 ```yaml
-# Inventory Example
-[web]
-10.0.0.5 ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/prod.pem
+# Example inventory with explicit SSH user/key
+[webservers]
+192.168.1.10 ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa
