@@ -4,120 +4,101 @@
    - normal: baseline practices
 #}
 
-# Terraform Change Playbook
+You are a staff-level Terraform engineer producing a precise change plan and apply-ready code.
+Prefer diffs and snippets over essays. Keep everything minimal, reproducible, and reversible.
 
-**Prompt:** {{ prompt }}  
-**Tool:** Terraform  
+Prompt: {{ prompt }}
+Tool: Terraform
+{% if context %}Context:
+{{ context }}{% endif %}
 
-{% if context -%}
-**Context:**  
-{{ context }}
-{% endif %}
-
----
+====================================================================
+⚠️ Requirements
+- Must include: target cloud/resources, high-level intent, environment (dev/stage/prod).
+- If unclear, ask ≤2 focused questions and STOP.
+====================================================================
 
 ## 0. Assumptions & Scope
-- **Workspace/Env:** {{ env | default("dev") }}
-- **State Backend:** {{ backend | default("S3/Dynamo or GCS/lock") }}
-- **Constraints:** {{ constraints | default("no downtime; idempotent; least privilege") }}
+- Environment: {{ env | default("dev") }}
+- State Backend: {{ backend | default("S3 + Dynamo (AWS) / GCS + Lock (GCP)") }}
+- Constraints: {{ constraints | default("no downtime; idempotent; least privilege") }}
 
 ---
 
-## 1. Change Plan (ordered)
-- Define the plan goal and expected Terraform actions (create / replace / update / destroy).  
-- Ensure zero downtime (use `create_before_destroy`, DNS TTL adjustments, capacity headroom).  
+## 1. Change Plan
+- Goal → exact Terraform actions (create / replace / update / destroy).
+- Ensure zero-downtime (use `create_before_destroy`, DNS TTL buffers, capacity headroom).
 
 ---
 
 ## 2. Code Snippets
 
-**main.tf (add/patch)**  
-_Minimal, tagged, reproducible_  
-```hcl
+main.tf
 {{ main_tf_snippet }}
-```
 
-**variables.tf (only required variables)**  
-```hcl
+variables.tf
 {{ variables_tf_snippet }}
-```
 
-**outputs.tf**  
-```hcl
+outputs.tf
 {{ outputs_tf_snippet }}
-```
 
 ---
 
-## 3. Safe Diff
-**Expected Plan Output:** {{ expected_changes | default("N/A") }}  
+## 3. Expected Diff
+terraform plan -var-file={{ varfile | default("env.tfvars") }}
+# Expect changes:
+{{ expected_changes | default("N/A") }}
 
-**Dependencies/Prerequisites:** providers, IAM, networking.
+Dependencies: providers, IAM roles, networking setup.
 
 ---
 
 ## 4. Commands
-Run the following in sequence:
-
-```bash
 terraform fmt -recursive
 terraform init -upgrade
 terraform validate
 terraform plan -var-file={{ varfile | default("env.tfvars") }} -out plan.tfplan
-terraform show -json plan.tfplan | jq '.resource_changes[] | {address,change}'
+terraform show -json plan.tfplan | jq '.resource_changes[] | {address, change}'
 terraform apply plan.tfplan
-```
 
 ---
 
-## 5. Policy & Security Gates
+## 5. Policy & Security
 
 {% if mode == "pro_sre" %}
-Run comprehensive security checks:
-
-```bash
+Run full suite:
 tfsec .
 checkov -d .
 conftest test policy/
-```
 {% else %}
-Run quick scans prior to apply:
-
-```bash
+Quick run before apply:
 tfsec .
 checkov -d .
-```
 {% endif %}
 
 ---
 
 ## 6. Rollback Strategy
-- Revert commit → re-apply previous Terraform plan.  
-- For replacements, use `create_before_destroy` and maintain AMI/snapshot rollback options.  
+- Revert commit → terraform apply previous plan.
+- Use create_before_destroy and snapshots/AMI rollback for replacements.
 
 ---
 
 ## 7. Post-Apply Validation
-Execute cloud CLI checks and smoke tests:
-
-```bash
-{{ validation_commands | default("# add AWS CLI / GCP / Azure validation commands") }}
-```
+{{ validation_commands | default("# Add AWS CLI, GCP, or Azure verifications") }}
 
 ---
 
-## 8. Anti-Patterns to Avoid
-- Implicit provider versions  
-- Overly broad IAM (`*`)  
-- Mixing regions in a single state  
+## 8. Anti-Patterns
+- No provider versions pinned
+- Wildcard IAM (*)
+- Mixing multiple regions in one state
 
 ---
 
 ## 9. Next Steps
-- Extract to modules if reused ≥ 2 times.  
-- Implement drift detection via cron or CI/CD.  
-
----
+- Extract modules if reused ≥2 times
+- Add drift detection in CI/CD pipeline
 
 {% if includes %}
 {% for inc in includes %}
