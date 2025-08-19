@@ -1,95 +1,125 @@
-templates/terraform_playbook.jinja2
 {# STREAMING NOTE: end with EXACTLY [CONTINUE_NEEDED] if cut #}
 {# MODE:
    - pro_sre: prefer advanced patterns & tfsec/checkov/opa examples
    - normal: baseline practices
 #}
 
-You are a staff level Terraform engineer producing a precise change plan + code.
-Prefer diffs/snippets over essays. Keep outputs apply-ready and reversible.
+# Terraform Change Playbook
 
-Prompt: {{ prompt }}
-Tool: Terraform
-{% if context %}Context:
-{{ context }}{% endif %}
+**Prompt:** {{ prompt }}  
+**Tool:** Terraform  
+
+{% if context -%}
+**Context:**  
+{{ context }}
+{% endif %}
 
 ---
-❌ Proceed only if prompt includes: target cloud/resources; high-level intent; environment (dev/stage/prod).
-✅ If unclear, ask ≤2 focused questions and STOP.
 
-## 0) Assumptions & Scope
-- Workspace/env: {{ env | default("dev") }}
-- State backend: {{ backend | default("S3/Dynamo or GCS/lock") }}
-- Constraints: {{ constraints | default("no downtime; idempotent; least privilege") }}
+## 0. Assumptions & Scope
+- **Workspace/Env:** {{ env | default("dev") }}
+- **State Backend:** {{ backend | default("S3/Dynamo or GCS/lock") }}
+- **Constraints:** {{ constraints | default("no downtime; idempotent; least privilege") }}
 
-## 1) Change Plan (ordered)
-- Plan goal → exact Terraform actions (create/replace/update/destroy).
-- Zero-downtime notes (use `create_before_destroy`, DNS TTL, capacity headroom).
+---
 
-## 2) Code Snippets
-### main.tf (add/patch)
-# minimal viable, tagged, reproducible
-# include versions, tags, and explicit dependencies where needed
+## 1. Change Plan (ordered)
+- Define the plan goal and expected Terraform actions (create / replace / update / destroy).  
+- Ensure zero downtime (use `create_before_destroy`, DNS TTL adjustments, capacity headroom).  
+
+---
+
+## 2. Code Snippets
+
+**main.tf (add/patch)**  
+_Minimal, tagged, reproducible_  
+```hcl
 {{ main_tf_snippet }}
+```
 
-variables.tf (only what's needed)
+**variables.tf (only required variables)**  
+```hcl
 {{ variables_tf_snippet }}
+```
 
-outputs.tf
+**outputs.tf**  
+```hcl
 {{ outputs_tf_snippet }}
+```
 
-## 3) Safe Diff (what changes)
+---
 
-Expect plan to show: {{ expected_changes | default("N/A") }}
+## 3. Safe Diff
+**Expected Plan Output:** {{ expected_changes | default("N/A") }}  
 
-Dependencies/prereqs: providers, IAM, networking.
+**Dependencies/Prerequisites:** providers, IAM, networking.
 
-## 4) Commands
+---
+
+## 4. Commands
+Run the following in sequence:
+
+```bash
 terraform fmt -recursive
 terraform init -upgrade
 terraform validate
 terraform plan -var-file={{ varfile | default("env.tfvars") }} -out plan.tfplan
 terraform show -json plan.tfplan | jq '.resource_changes[] | {address,change}'
 terraform apply plan.tfplan
+```
 
-## 5) Policy & Security Gates
+---
+
+## 5. Policy & Security Gates
 
 {% if mode == "pro_sre" %}
+Run comprehensive security checks:
 
-Run tfsec, checkov, OPA/Conftest:
+```bash
 tfsec .
 checkov -d .
 conftest test policy/
-
+```
 {% else %}
+Run quick scans prior to apply:
 
-Basic: tfsec/checkov quick run prior to apply.
-
+```bash
+tfsec .
+checkov -d .
+```
 {% endif %}
 
-## 6) Rollback Strategy
+---
 
-Revert commit → terraform apply to previous plan.
+## 6. Rollback Strategy
+- Revert commit → re-apply previous Terraform plan.  
+- For replacements, use `create_before_destroy` and maintain AMI/snapshot rollback options.  
 
-For replacements, ensure create_before_destroy and snapshot/AMI rollback.
+---
 
-## 7) Post-Apply Validation
-# cloud cli checks + smoke test
-{{ validation_commands | default("# add AWS CLI/GCP/Azure verifications") }}
+## 7. Post-Apply Validation
+Execute cloud CLI checks and smoke tests:
 
-## 8) Anti-Patterns
+```bash
+{{ validation_commands | default("# add AWS CLI / GCP / Azure validation commands") }}
+```
 
+---
+
+## 8. Anti-Patterns to Avoid
 - Implicit provider versions  
-- Wide * IAM  
-- Mixing regions in one state  
+- Overly broad IAM (`*`)  
+- Mixing regions in a single state  
 
-## 9) Next Steps
+---
 
-- Module extraction if reused ≥2 times  
-- Drift detection via cron/CI  
+## 9. Next Steps
+- Extract to modules if reused ≥ 2 times.  
+- Implement drift detection via cron or CI/CD.  
+
+---
 
 {% if includes %}
-{# optional snippet includes #}
 {% for inc in includes %}
 {% include "snippets/terraform/" + inc + ".jinja2" ignore missing %}
 {% endfor %}
