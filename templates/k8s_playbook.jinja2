@@ -68,3 +68,6 @@ kubectl rollout undo deploy/{{ name | default("app") }} -n {{ namespace | defaul
 {% include "snippets_pro_sre/kustomize_overlays.jinja2" ignore missing %}
 {% include "snippets_pro_sre/canary_istio.jinja2" ignore missing %}
 {% endif %}
+
+---
+✅ End of Kubernetes Playbook
