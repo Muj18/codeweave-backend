@@ -251,11 +251,11 @@ async def generate_code(req: PromptRequest):
     # Select model & token budget
     if (req.plan or "free").lower() == "free":
         model = "gpt-3.5-turbo"
-        desired_cap = 3000
+        desired_cap = 4000
     else:
         model = "gpt-4o"
         prompt_tokens = count_tokens(model, rendered_prompt)
-        desired_cap = max(3500, safe_max_tokens(model, rendered_prompt, desired_cap=12000, buffer=200))
+        desired_cap = max(6000, safe_max_tokens(model, rendered_prompt, desired_cap=20000, buffer=500))
 
     async def token_stream():
         try:
