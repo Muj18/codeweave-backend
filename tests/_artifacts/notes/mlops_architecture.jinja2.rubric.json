@@ -1,0 +1,19 @@
+{
+  "total": 19,
+  "breakdown": {
+    "exec_summary": 0,
+    "diagram": 2,
+    "multi_cloud": 2,
+    "security": 3,
+    "cost": 3,
+    "resilience": 3,
+    "observability": 2,
+    "automation": 2,
+    "runbook": 0,
+    "risks": 2,
+    "compliance": 0,
+    "wow": 0
+  },
+  "max": 30,
+  "threshold": 18
+}

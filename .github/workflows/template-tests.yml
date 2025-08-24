@@ -1,0 +1,23 @@
+name: Template Tests
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -U pytest jinja2 pyyaml
+      - name: Run template tests
+        run: pytest -q
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: template-test-artifacts
+          path: tests/_artifacts/**

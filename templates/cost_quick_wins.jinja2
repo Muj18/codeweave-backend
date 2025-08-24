@@ -1,42 +1,98 @@
-{# STREAMING NOTE:
-   If the model cannot finish due to length, it should end with EXACTLY: [CONTINUE_NEEDED]
-#}
+# templates/cost_quick_wins.jinja2
 
-{# EXPECTED INPUTS:
-   - prompt: cost optimization ask
-   - cloud: aws|azure|gcp
-   - env: prod|stage|dev
-#}
-
-You are a staff-level FinOps engineer delivering **immediate cost savings** guidance.  
-Prioritize “quick wins” (≤30 days) with measurable $ impact.  
-
-Prompt: {{ prompt }}  
-Cloud: {{ cloud | default("unspecified") }} • Env: {{ env | default("prod") }}  
+You are a **staff-level Cloud FinOps Engineer** tasked with producing a production-grade **Cost Optimization Playbook**.  
+The output must:  
+- Be written as if reviewed by senior architects and CTOs.  
+- Cover **multi-cloud**, **automation (IaC, Terraform, GitHub Actions, ArgoCD)**, **resilience (HA, multi-AZ, DR, RPO)**, **observability (logs, metrics, tracing, SLOs)**, **security & compliance (IAM, least privilege, encryption, PCI, ISO 27001, HIPAA, GDPR)**, **cost efficiency (rightsizing, spot, savings plans)**, **risks**, **runbook**, and **quick wins**.  
+- Provide **complete YAML/HCL examples** (no pseudocode).  
+- Use structured markdown with clear sections.
 
 ---
 
-## 1) High-Impact Quick Wins
-- Rightsize top 10 over-provisioned compute/storage  
-- Turn off idle/non-prod workloads (use schedules)  
-- Use spot/preemptible where safe  
-- Convert baseline workloads to RIs / Savings Plans  
-- De-dupe storage, enable lifecycle policies  
+## 1) Executive Summary
+- **Prompt:** {{ prompt | default("Identify quick wins for cloud cost optimization.") }}  
+- **Tool:** Cost Optimization Playbook  
+- **Cloud/Runtime:** {{ cloud | default("multi-cloud (AWS/Azure/GCP)") }}  
+- **Prior Conversation Context:** {{ conversation | default("{}") }}  
 
-## 2) Mid-Term (1–3 Months)
-- Autoscaling tuned (HPA/Cluster Autoscaler/VMSS)  
-- Caching (CDN, DB query cache) to reduce infra load  
-- Chargeback/showback reporting → accountability  
+This playbook outlines **immediate cost-saving opportunities** across AWS, Azure, and GCP. It applies **rightsizing, spot/preemptible usage, and savings plans**, while ensuring **HA, security, compliance, and observability**.  
 
-## 3) Validation
-- Cloud cost dashboards (AWS Cost Explorer, GCP Billing, Azure Cost Mgmt)  
-- Unit economics (cost/request, cost/customer)  
-- Track realized vs forecast savings  
+---
 
-## 4) Anti-Patterns
-- Blindly using spot for stateful DBs  
-- Buying RIs without workload stability analysis  
-- No budgets/alerts configured  
+## 2) Architecture Diagram
+{{'```mermaid'}}
+graph TD
+    Cloud[Multi-Cloud: AWS/Azure/GCP] --> Compute[Rightsized Compute]
+    Cloud --> Spot[Spot/Preemptible Nodes]
+    Cloud --> Savings[Savings Plans/RI]
+    Cloud --> Monitor[Observability: Logs/Metrics/Tracing]
+    Cloud --> Sec[Security (IAM/KMS/Least Privilege)]
+{{'```'}}
 
-## 5) Final Notes
-Quick wins prove FinOps value → reinvest savings into reliability/security.
+---
+
+## 3) Core Architecture
+- **Automation**: Terraform, GitHub Actions, ArgoCD for deployments.  
+- **Resilience**: multi-AZ, HA clusters, DR tested with RPO/RTO.  
+- **Security**: IAM least privilege, KMS encryption.  
+- **Compliance**: PCI, ISO 27001, HIPAA, GDPR.  
+- **Observability**: metrics, logs, tracing, SLOs.  
+- **Cost**: rightsizing, spot instances, savings plans.  
+
+---
+
+## 4) Production-Grade Examples
+
+### Terraform for Rightsizing
+{{'```hcl'}}
+resource "aws_instance" "web" {
+  ami           = "ami-123456"
+  instance_type = "t3.small"
+  count         = 2
+}
+{{'```'}}
+
+### GitHub Actions for Cost Reports
+{{'```yaml'}}
+name: cost-optimization
+on: [schedule]
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch AWS Cost Explorer
+        run: python scripts/cost_report.py
+{{'```'}}
+
+---
+
+## 5) Runbook – Step-by-Step
+1. Enable cost explorer & budgets in each cloud.  
+2. Apply Terraform rightsizing for dev/test.  
+3. Switch compute to spot/preemptible where safe.  
+4. Purchase savings plans for steady workloads.  
+5. Automate monthly KPI reports with GitHub Actions.  
+
+---
+
+## 6) Risks & Mitigations
+| Risk | Mitigation |
+|------|------------|
+| Spot interruption | Use mixed ASGs, graceful termination |
+| Under-provisioning | Rightsize only after 30 days metrics |
+| Compliance gaps | Ensure budgets don’t disable critical HA |
+| Savings plan lock-in | Start small (1yr, partial upfront) |
+
+---
+
+## 7) Quick Wins
+- Immediate savings: shift non-prod to spot/preemptible.  
+- Enable storage tiering to S3 IA / GCS Nearline.  
+- Delete unattached volumes & idle IPs.  
+- Automate KPI: **cloud cost per team per month**.  
+
+---
+
+## ✅ End of Template

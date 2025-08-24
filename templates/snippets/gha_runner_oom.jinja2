@@ -1,4 +1,4 @@
-### GitHub Actions Runner Failure Troubleshooting
+### GitHub Actions Runner Failure Troubleshooting — Production-Grade
 
 **Key Symptoms**
 - Jobs stuck in `queued` state, never picked up
@@ -9,33 +9,37 @@
 **Immediate Triage**
 - Check runner status in GitHub: *Settings → Actions → Runners*
 - Verify self-hosted runner service is active:
-    sudo systemctl status actions.runner.*
+  ~~~bash
+  sudo systemctl status actions.runner.*
+  ~~~
 - Inspect runner logs:
-    tail -f _diag/Runner_*.log
+  ~~~bash
+  tail -f _diag/Runner_*.log
+  ~~~
 - Confirm labels (`self-hosted`, `linux`, `x64`, custom tags) match workflow `runs-on` config
 - Ensure network connectivity to GitHub Actions service endpoints
 
-**Safe Fix**
-    ```yaml
-    jobs:
-      build:
-        runs-on: [self-hosted, linux, x64]   # Ensure label matches registered runner
-        steps:
-          - uses: actions/checkout@v4
-          - name: Setup Node.js
-            uses: actions/setup-node@v4
-            with:
-              node-version: "18"
-    ```
+**Safe Fix — Workflow Example**
+~~~yaml
+jobs:
+  build:
+    runs-on: [self-hosted, linux, x64]   # Ensure label matches registered runner
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+~~~
 
-**Scaling Fix**
-    ```bash
-    docker run -d --name gha-runner \
-      -e RUNNER_SCOPE=repo \
-      -e GITHUB_PAT=<token> \
-      -e RUNNER_NAME=runner-$(uuidgen) \
-      ghcr.io/actions/runner:latest
-    ```
+**Scaling Fix — Self-Hosted Runner Container**
+~~~bash
+docker run -d --name gha-runner \
+  -e RUNNER_SCOPE=repo \
+  -e GITHUB_PAT=<token> \
+  -e RUNNER_NAME=runner-$(uuidgen) \
+  ghcr.io/actions/runner:latest
+~~~
 ℹ️ Add more runners or move to ephemeral runners for autoscaling.
 
 **Cloud & Platform Notes**

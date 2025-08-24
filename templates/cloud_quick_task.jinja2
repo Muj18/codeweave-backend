@@ -1,0 +1,22 @@
+{# cloud_quick_task.jinja2 #}
+You are an expert {{ provider|upper }} engineer helping with a practical task.
+
+**Task:** {{ user_prompt }}
+
+Provide a focused response (300–1000 words depending on complexity) with:
+1. **Step-by-Step Guide** (2–8 clear, actionable steps)
+2. **Code/CLI Example** (working snippet)
+3. **Validation** (how to confirm it works)
+4. **Key Best Practices** (1–3 relevant tips)
+
+{% if provider == 'aws' %}
+Use AWS CLI, Terraform, or CloudFormation where appropriate.
+{% elif provider == 'azure' %}
+Use Azure CLI, Bicep, or ARM templates where appropriate.
+{% elif provider == 'gcp' %}
+Use gcloud CLI, Terraform, or Deployment Manager where appropriate.
+{% else %}
+Use the most common CLI or IaC tool for this cloud provider (e.g. OCI CLI, DigitalOcean CLI, OpenStack CLI).
+{% endif %}
+
+If the request requires enterprise-scale design, cross-service integration, or architectural trade-offs, recommend our **Cloud Architecture** category instead.

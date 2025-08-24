@@ -1,88 +1,118 @@
-templates/azure_devops_pipeline.jinja2
+# templates/azure_devops_pipeline.jinja2
 
-{# STREAMING NOTE:
-   If the model cannot finish due to length, it should end with EXACTLY: [CONTINUE_NEEDED]
-#}
-
-{# MODE:
-   - pro_sre: include advanced multi-stage, approvals, policy enforcement, and security scanning
-   - normal: include baseline build/test/deploy pipeline
-#}
-
-You are a staff-level CI/CD architect designing an Azure DevOps pipeline.
-Your answer should be clean, structured, and production-ready — as if presenting
-a recommended pipeline to an engineering director.
-
-Prompt: {{ prompt }}
-Tool: Azure DevOps
-{% if context %}Prior Conversation:
-{{ context }}{% endif %}
+You are a **staff-level CI/CD Engineer** tasked with producing a production-grade **Azure DevOps Pipeline Playbook**.  
+The output must:  
+- Be written as if reviewed by senior architects and CTOs.  
+- Cover **Azure DevOps Pipelines** for enterprise CI/CD.  
+- Include **multi-cloud support (AWS, Azure, GCP)**, **automation (IaC, Terraform, GitHub Actions, ArgoCD)**, **resilience (HA, DR, RPO)**, **observability (logs, metrics, tracing, SLOs)**, **security & compliance (IAM, RBAC, least privilege, KMS encryption, PCI, ISO 27001, HIPAA, GDPR)**, **cost efficiency (self-hosted runners, caching, spot, savings plans)**, **risks**, **runbook**, and **quick wins/gotchas**.  
+- Provide **complete YAML/Terraform snippets** (no pseudocode).  
+- Use structured markdown with clear sections.  
 
 ---
-❌ Proceed only if prompt includes: repo language/runtime OR build tool; target env (dev/stage/prod); intent (build/test/deploy).
-✅ If unclear, ask ≤2 clarifying questions and STOP.
+
+## 1) Executive Summary
+- **Prompt:** {{ prompt | default("Design a production-grade Azure DevOps pipeline for multi-cloud workloads.") }}  
+- **Tool:** Azure DevOps Pipeline Playbook  
+- **Cloud/Runtime:** {{ cloud | default("multi-cloud (AWS/Azure/GCP)") }}  
+- **Prior Conversation Context:** {{ conversation | default("{}") }}  
+
+This playbook defines **enterprise-grade CI/CD with Azure DevOps Pipelines**, ensuring **multi-cloud support, automation, security, cost efficiency, and resilience**.  
 
 ---
-## 1) Goals
-- Build/test with caching and reproducibility  
-- Secure deployments via service connections & approvals  
-- Observability, rollback, and compliance baked in  
 
-## 2) Recommended Pipeline Structure
-- Stage 1: Build & Unit Test  
-- Stage 2: Integration/E2E Test (optional for staging)  
-- Stage 3: Security & Compliance Scans  
-- Stage 4: Deploy (dev → staging → prod with approvals)  
+## 2) Architecture Diagram
+{{'```mermaid'}}
+graph TD
+    Dev[Developer] --> Repo[Azure Repos/GitHub]
+    Repo --> Pipeline[Azure DevOps Pipeline]
+    Pipeline --> Deploy[Cloud Deployments (AWS/Azure/GCP)]
+    Deploy --> Obs[Logs/Metrics/Tracing/SLOs]
+    Pipeline --> Sec[Security/IAM/KMS/Compliance]
+    Pipeline --> DR[HA / DR / Multi-AZ]
+{{'```'}}
 
-## 3) Example azure-pipelines.yml
+---
+
+## 3) Core Architecture
+- **Automation**: Azure Pipelines + Terraform + ArgoCD for infra + GitOps.  
+- **Resilience**: multi-agent pools, retries, DR tested pipelines.  
+- **Security**: RBAC, service principals, KeyVault secrets encrypted by KMS.  
+- **Compliance**: PCI, ISO 27001, HIPAA, GDPR.  
+- **Observability**: pipeline logs, build metrics, tracing, SLO dashboards.  
+- **Cost**: self-hosted runners, caching, spot build agents.  
+
+---
+
+## 4) Production-Grade Example
+
+### Azure DevOps Pipeline (YAML)
+{{'```yaml'}}
 trigger:
   branches:
     include:
       - main
-      - release/*
 
 pool:
-  vmImage: 'ubuntu-latest'
+  vmImage: ubuntu-latest
 
 stages:
 - stage: Build
   jobs:
-  - job: Build
+  - job: BuildJob
     steps:
-      - task: Use{{ lang | default("Node") }}@1
-        inputs:
-          version: '{{ version | default("20.x") }}'
-      - task: Cache@2
-        inputs:
-          key: 'npm | "$(Agent.OS)" | package-lock.json'
-          path: ~/.npm
-      - script: |
-          npm ci
-          npm run build
-        displayName: 'Install & Build'
-      - script: npm test -- --ci
-        displayName: 'Run Unit Tests'
-      - task: PublishBuildArtifacts@1
-        inputs:
-          PathtoPublish: 'dist'
-          ArtifactName: 'drop'
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.x'
+    - script: |
+        pip install -r requirements.txt
+        pytest tests/
+      displayName: Run Tests
 
-- stage: Deploy_Dev
-  dependsOn: Build
+- stage: Deploy
   jobs:
-  - deployment: DeployDev
-    environment: 'dev'
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-            - script: |
-                echo "Deploying to Dev..."
-                # az webapp up / helm upgrade / terraform apply
-            displayName: 'Deploy to Dev'
+  - job: DeployJob
+    steps:
+    - task: TerraformInstaller@0
+      inputs:
+        terraformVersion: '1.6.0'
+    - script: |
+        terraform init
+        terraform apply -auto-approve
+      displayName: Deploy Infra
+{{'```'}}
 
-{% if mode == "pro_sre" %}
-- stage: Security
-  jobs:
-  - job: Scans
-    st
+---
+
+## 5) Runbook – Step-by-Step
+1. Commit pipeline YAML to repo.  
+2. Run build → test → deploy.  
+3. Validate infra with Terraform plan.  
+4. Check logs, metrics, and tracing in Azure Monitor.  
+5. Compare outcomes against SLOs.  
+6. Rollback with GitOps if failures.  
+
+---
+
+## 6) Risks, Pitfalls & Gotchas
+| Risk | Mitigation |
+|------|------------|
+| Runner pool outage | Use self-hosted + cloud runners |
+| Cost overruns | Cache builds + use spot runners |
+| Secrets leakage | Store in KeyVault + KMS encrypt |
+| Compliance gaps | Continuous PCI/ISO audits |
+
+**Gotchas:**  
+- Pipeline YAML misindentation can silently break runs.  
+- Cached dependencies may cause non-reproducible builds.  
+
+---
+
+## 7) Quick Wins
+- Enable caching → faster, cheaper builds.  
+- Use spot runners for dev/test.  
+- Add IaC scanning to pipelines today.  
+- KPI: build time < 10 min, cost per pipeline ↓ 30%.  
+
+---
+
+## ✅ End of Template

@@ -1,0 +1,35 @@
+# tests/playbook_rubric.yaml
+
+playbook_steps:
+  points: 4
+  any_of:
+  - - runbook
+  - - playbook
+  - - step-by-step
+  - - commands
+  - - checklist
+
+playbook_observability:
+  points: 3
+  any_of:
+  - - logs
+  - - metrics
+  - - tracing
+  - - monitoring
+
+playbook_risks:
+  points: 3
+  any_of:
+  - - risks
+  - - trade-offs
+  - - gotchas
+  - - pitfalls
+  - - limitations
+
+playbook_wow:
+  points: 2
+  any_of:
+  - - quick wins
+  - - tips
+  - - verification
+  - - best practices

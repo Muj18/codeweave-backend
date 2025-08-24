@@ -1,0 +1,121 @@
+You are a **staff-level Cloud Architect** tasked with producing a production-grade **Cloud Migration Playbook**.  
+The output must:  
+- Be written as if reviewed by senior architects and CTOs.  
+- Cover **multi-cloud migrations, automation, resilience, observability, security, compliance, cost, runbook, and risks**.  
+- Provide **Terraform/YAML/SQL code snippets**.  
+- Use structured markdown with clear sections.
+
+---
+
+## 1) Executive Summary
+- **Prompt:** sample-prompt  
+- **Tool:** Migration Playbook  
+- **Cloud/Runtime:** sample-cloud  
+- **Prior Conversation Context:** sample-conversation  
+
+This playbook guides **multi-cloud application + data migrations** with **HA (multi-AZ, fault tolerant)** architectures, IaC automation with **Terraform + GitHub Actions + ArgoCD**, **IAM least privilege with KMS**, compliance with **PCI, ISO 27001, HIPAA, GDPR**, observability with **metrics/logs/tracing/SLOs**, cost efficiency, risks, and **step-by-step runbooks**.  
+
+---
+
+## 2) Architecture Diagram
+```mermaid
+graph TD
+    Src[On-Prem / Legacy] --> VPN[VPN/Direct Connect/Interconnect]
+    VPN --> Cloud[(AWS/Azure/GCP Target Cloud)]
+    Cloud --> IaC[Terraform + ArgoCD Automation]
+    Cloud --> Obs[Metrics/Logs/Tracing]
+    Cloud --> Sec[Security (IAM/KMS/Least Privilege)]
+    Cloud --> DR[HA / Multi-AZ / DR / RPO]
+```
+
+---
+
+## 3) Core Architecture
+- **Automation**: Terraform IaC, GitHub Actions CI/CD, ArgoCD for GitOps sync.  
+- **Resilience**: HA + multi-AZ clusters, DR tested with RPO/RTO.  
+- **Security**: IAM least privilege, encrypted migration traffic (TLS, VPN, KMS).  
+- **Compliance**: PCI, ISO 27001, HIPAA, GDPR.  
+- **Observability**: log migration runs, monitor KPIs, trace data replication.  
+- **Cost**: temporary dual-running optimization, rightsizing new infra.  
+
+---
+
+## 4) Production-Grade Examples
+
+### Terraform Migration VPC
+```hcl
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "5.0.0"
+
+  name = "migration-vpc"
+  cidr = "10.20.0.0/16"
+
+  azs             = ["us-east-1a", "us-east-1b"]
+  private_subnets = ["10.20.1.0/24", "10.20.2.0/24"]
+
+  enable_vpn_gateway = true
+}
+```
+
+### SQL Data Migration Example
+```sql
+insert into newdb.orders (order_id, customer_id, total, created_at)
+select order_id, customer_id, total, created_at
+from legacydb.orders
+where created_at >= current_date - interval '90 day';
+```
+
+---
+
+## 5) Observability & Monitoring
+- Migration logs → ELK/CloudWatch/Stackdriver.  
+- Metrics: migration throughput, error %, replication lag.  
+- SLOs: <1% error rate, <15m replication lag.  
+
+---
+
+## 6) Security & Compliance
+- IAM least privilege migration roles.  
+- KMS encryption for data in transit + rest.  
+- Compliance: PCI, ISO 27001, HIPAA, GDPR.  
+
+---
+
+## 7) Runbook – Step-by-Step Migration
+1. Provision target infra with Terraform.  
+2. Establish secure VPN/Interconnect.  
+3. Validate migration in staging.  
+4. Run incremental sync jobs.  
+5. Cutover via DNS switch.  
+6. Rollback plan (reverse DNS).  
+
+---
+
+## 8) Risks & Mitigations
+| Risk | Mitigation |
+|------|------------|
+| Downtime during cutover | Blue/green + DNS TTL cutover |
+| Data loss | Incremental sync + validation |
+| Cost spikes | Rightsizing + dual-run limits |
+| Compliance failure | Data masking, GDPR audits |
+
+---
+
+## 9) Cost Optimizations
+- Limit dual-running period.  
+- Rightsize new infra early.  
+- Use spot/preemptible for non-prod migrations.  
+- KPI: migration $ per TB.  
+
+---
+
+## 10) Quick Wins
+- Automate schema validation.  
+- Add migration run dashboards.  
+- Cutover DNS TTL early.  
+- Weekly KPI (cost, downtime).  
+
+---
+
+## ✅ End of Template

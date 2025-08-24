@@ -13,31 +13,31 @@
 - Confirm network connectivity and DNS resolution to LLM endpoints
 
 **Safe Fix**
-    ```python
-    import openai
-    import backoff
-    import requests
+~~~python
+import openai
+import backoff
+import requests
 
-    # Add timeout + retries to handle LLM slowness
-    @backoff.on_exception(backoff.expo, (requests.exceptions.RequestException,))
-    def call_llm(prompt):
-        return openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
-            request_timeout=30  # seconds
-        )
-    ```
+# Add timeout + retries to handle LLM slowness
+@backoff.on_exception(backoff.expo, (requests.exceptions.RequestException,))
+def call_llm(prompt):
+    return openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": prompt}],
+        request_timeout=30  # seconds
+    )
+~~~
 
 **Scaling Fix**
-    ```python
-    # Batch requests to reduce latency impact
-    prompts = ["q1", "q2", "q3"]
-    responses = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[{"role": "user", "content": p} for p in prompts],
-        request_timeout=60
-    )
-    ```
+~~~python
+# Batch requests to reduce latency impact
+prompts = ["q1", "q2", "q3"]
+responses = openai.ChatCompletion.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": p} for p in prompts],
+    request_timeout=60
+)
+~~~
 
 **Cloud & Platform Notes**
 - Ensure autoscaling is enabled for backend services handling LLM calls

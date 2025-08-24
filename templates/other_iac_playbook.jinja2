@@ -1,34 +1,237 @@
-templates/other_iac_playbook.jinja2
+# IaC Playbook — Staff-Level, Production-Grade
 
-{# STREAMING NOTE... #}
-
-You are a staff level DevOps engineer producing IaC guidance for an uncommon tool.
-Always produce: overview, quick wins, safe commands, config snippets, anti-patterns.
-
-Prompt: {{ prompt }}
-Tool: {{ tool }}
+You are a **staff-level Cloud Engineer** tasked with producing a production-grade **Infrastructure-as-Code (IaC) Playbook**.  
+This playbook must serve **enterprises, regulated industries, and high-scale environments**, and deliver **staff+ depth**.  
 
 ---
-## 1) Tool Overview & Common Use Cases
-- Typical role in stack (provisioning, config, infra mgmt).  
-- Where it overlaps vs complements Terraform/Ansible/Pulumi.  
 
-## 2) Quick Wins
-- Get started in <5 steps.  
-- Most common commands / entrypoint.  
+## 1) Executive Summary
+- **Prompt:** {{ prompt | default("Provision secure, scalable, production-grade infrastructure via IaC.") }}  
+- **Tool:** IaC Playbook  
+- **Cloud/Runtime:** {{ cloud | default("Multi-cloud (AWS, Azure, GCP)") }}  
+- **Context:** {{ conversation | default("{}") }}  
 
-## 3) Config Snippets (safe defaults)
-{{ config_snippet | default("# minimal config for this tool") }}
+This playbook enforces **IaC maturity at enterprise scale**:  
+- **Terraform with secure backends + policy-as-code**  
+- **GitHub Actions pipelines with approval gates + compliance scans**  
+- **Cross-domain integrations (GenAI, MLOps, Data pipelines)**  
+- **Disaster recovery tested with RPO/RTO**  
+- **Cost dashboards tied to business ROI**  
 
-## 4) Validation
-{{ validation_commands | default("# tool validate / lint / plan equivalent") }}
+---
 
-## 5) Anti-Patterns
-- Overuse of implicit defaults  
-- Drift risk  
-- Lack of locking  
+## 2) Architecture Diagram
+{{'```mermaid'}}
+graph TD
+    Dev[Developer] --> Repo[Git Repo]
+    Repo --> CI[CI/CD: GitHub Actions]
+    CI --> Security[Security Scans + Policy Checks]
+    Security --> Approval[Manual Approval Gates]
+    Approval --> Terraform[Terraform Apply with State Locking]
+    Terraform --> Cloud[(AWS/Azure/GCP Infra)]
+    Cloud --> ArgoCD[GitOps Sync: Apps + Data Pipelines]
+    Cloud --> DR[HA / Multi-AZ / DR Tested]
+    Cloud --> Obs[Metrics + Logs + Tracing + Cost Dashboards]
+    Cloud --> Compliance[Audit Logs + Controls + Evidence]
+{{'```'}}
 
-## 6) Next Steps
-- Add CI/CD integration  
-- Policy enforcement  
-- State mgmt
+---
+
+## 3) Core Architecture
+
+- **Automation**
+  - Terraform modules with **remote state + DynamoDB locking**.  
+  - GitHub Actions with **pre-commit hooks, OPA/Sentinel policies, approval gates**.  
+  - ArgoCD GitOps for continuous drift correction across apps + ML pipelines.  
+
+- **Resilience**
+  - Multi-AZ & multi-region deployments.  
+  - **Disaster recovery testing**: simulate region failover, validate RPO ≤ 15m, RTO ≤ 1h.  
+  - PodDisruptionBudgets + autoscaling in K8s.  
+
+- **Security & Compliance**
+  - IAM least privilege.  
+  - Vault/Secrets Manager with rotation.  
+  - **Policy-as-code examples (OPA)** baked into pipelines.  
+  - Audit-ready for **PCI, ISO 27001, HIPAA, GDPR**.  
+
+- **Observability**
+  - Drift detection → alerts in Slack/MS Teams.  
+  - Prometheus queries for infra cost + availability.  
+  - OpenTelemetry traces across infra + GenAI pipelines.  
+  - SLO dashboards: uptime ≥ 99.95%, API latency p95 < 200ms.  
+
+- **Cost**
+  - Spot/preemptible for dev/test workloads.  
+  - Rightsized defaults in Terraform.  
+  - **Grafana dashboards** for $/workload, with alerts on >20% spikes.  
+
+---
+
+## 4) Production-Grade Examples
+
+### Terraform Backend (State + Locking)
+{{'```hcl'}}
+terraform {
+  backend "s3" {
+    bucket         = "iac-prod-state"
+    key            = "global/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "iac-state-lock"
+    encrypt        = true
+  }
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+{{'```'}}
+
+### Enterprise GitHub Actions Pipeline
+{{'```yaml'}}
+name: terraform
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v2
+      - run: terraform fmt -check
+      - run: terraform validate
+      - run: terraform plan -out=tfplan
+      - name: Run OPA Policy Check
+        run: opa eval --format pretty --data policies --input tfplan "data.terraform.deny"
+      - name: Secrets Scan
+        uses: trufflesecurity/trufflehog@main
+
+  apply:
+    needs: validate
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: terraform apply -input=false tfplan
+    environment:
+      name: production
+      url: https://dashboard.company.com/terraform
+    concurrency:
+      group: terraform-apply
+      cancel-in-progress: false
+{{'```'}}
+
+### OPA Policy Example (deny if public S3 bucket)
+{{'```rego'}}
+package terraform
+
+deny[msg] {
+  input.resource_changes[_].type == "aws_s3_bucket"
+  input.resource_changes[_].change.after.acl == "public-read"
+  msg = "Public S3 buckets are not allowed."
+}
+{{'```'}}
+
+---
+
+## 5) Disaster Recovery Scenarios
+
+- **Scenario 1: Region Failure**
+  - Simulate outage by disabling AWS us-east-1.  
+  - Validate traffic reroutes via Route53 → us-west-2.  
+  - Test DB failover to read replica.  
+  - KPI: recovery < 60 minutes.  
+
+- **Scenario 2: State File Corruption**
+  - Restore from S3 versioning.  
+  - Validate against Git history.  
+  - Run `terraform refresh` → reconcile drift.  
+
+- **Scenario 3: Data Pipeline Failure**
+  - Test re-run of Spark job with Airflow DAG rollback.  
+  - Validate checkpoints + idempotency.  
+
+---
+
+## 6) Cost Monitoring Dashboards
+
+### Prometheus Query — Infra Cost by Service
+{{'```promql'}}
+sum(rate(cloud_cost_dollars[1h])) by (service)
+{{'```'}}
+
+### Grafana KPI Board
+- Cost per workload ($/app/month).  
+- Cost anomaly alerts (>20% spike).  
+- Infra $ per 1k requests.  
+
+---
+
+## 7) Runbook – Step-by-Step IaC Ops
+
+### A) Day-to-Day Changes
+1. Developer pushes PR.  
+2. CI runs `terraform plan` + OPA policy checks.  
+3. Manual approval required.  
+4. Terraform applies infra with **state lock**.  
+5. ArgoCD reconciles app workloads.  
+6. Drift alerts checked in Slack.  
+
+### B) Migration Procedures
+- **Backend migration:**  
+  - `terraform state pull` → export current state.  
+  - Import into new backend (`terraform state push`).  
+  - Validate `terraform plan` matches baseline.  
+
+### C) Rollback
+- For infra:  
+  - `terraform apply -target` → revert specific resources.  
+- For apps:  
+  - ArgoCD → select previous sync.  
+- For pipelines:  
+  - Airflow → mark task as failed, trigger retry.  
+
+---
+
+## 8) Risks & Mitigations
+| Risk | Mitigation |
+|------|------------|
+| Drift between IaC & runtime | GitOps auto-sync + weekly drift report |
+| Secret leakage | Vault/KMS + CI/CD scanning |
+| State file corruption | S3 versioning + DynamoDB locks |
+| Compliance audit failure | Policy-as-code + automated evidence exports |
+| Cost overruns | Alerts + anomaly detection in Grafana |
+
+---
+
+## 9) Business ROI & Compliance Integration
+
+- **ROI:**  
+  - IaC reduces infra delivery time by ~70%.  
+  - Cost anomalies detected automatically → ~25% savings/year.  
+  - MTTR (Mean Time to Recovery) lowered by tested runbooks.  
+
+- **Compliance Evidence:**  
+  - Terraform plans stored as audit artifacts.  
+  - GitHub Actions logs → proof of peer review.  
+  - ArgoCD sync logs → evidence of drift control.  
+
+---
+
+## 10) Quick Wins & Gotchas
+- ✅ Enable drift detection alerts today.  
+- ✅ Add **OPA/Sentinel policy-as-code** for compliance.  
+- ✅ Add pre-commit hooks for `terraform fmt` + `terraform validate`.  
+- ✅ Automate KPI dashboards.  
+
+**Gotchas:**  
+- Forgetting backend encryption → state leaks.  
+- Running `terraform apply` outside pipeline → bypasses audit trail.  
+- Ignoring cost dashboards → surprise $100k bills.  
+
+---
+
+## ✅ End of Playbook

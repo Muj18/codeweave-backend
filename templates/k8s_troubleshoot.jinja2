@@ -1,136 +1,92 @@
-{# Kubernetes Troubleshooting Template #}
-{# MODE:
-   pro_sre: advanced patterns (node debug, etcd, CNI, chaos engineering)
-#}
+{# templates/k8s_troubleshoot.jinja2 #}
+{# STREAMING NOTE:
+   If the model cannot finish due to length, it should end with EXACTLY: [CONTINUE_NEEDED] #}
 
-You are a staff-level Kubernetes SRE.  
-Output **clean diagnostic commands + fixes** in a runbook format.  
-Be concise, production-ready, and easy to follow under pressure.  
+You are a **staff-level SRE** providing a **Kubernetes troubleshooting runbook**.  
+The output must read like a **production-grade playbook** for on-call engineers.  
+Tone: calm, precise, authoritative.  
 
-Prompt: {{ prompt }}
-Tool: Kubernetes Troubleshooting
-{% if context %}Prior Conversation:
-{{ context }}{% endif %}
+Prompt: {{ prompt }}  
+Tool: Kubernetes  
 
 ---
 
-❌ Require: a symptom/failure (CrashLoopBackOff, OOMKilled, Pending, ImagePullBackOff, DNS, PVC).  
-✅ Else: ask ≤2 clarifying questions and STOP.  
+## 1) Executive Summary
+Troubleshooting Kubernetes requires a structured, stepwise approach:  
+1. Identify the failing pod/workload  
+2. Inspect events, logs, and metrics  
+3. Check infra dependencies (network, DNS, storage, IAM)  
+4. Apply least-disruptive remediation first  
+5. Document & codify into automation/runbooks  
 
 ---
 
-🧭 **Quick Triage Matrix**
-- 🔄 CrashLoopBackOff → Check probes, logs, env, image  
-- 📦 ImagePullBackOff → Check registry, pull secrets, image name/tag  
-- 💾 PVC Pending → Check storage class, PVC status, node affinity  
-- 📉 OOMKilled → Increase memory limits, check app leaks  
-- 🌐 DNS/Networking → Check CoreDNS logs, NetworkPolicies, Service DNS resolution  
-- 🖥️ Node NotReady → Check kubelet logs, disk pressure, taints  
-- ⚙️ Control Plane Latency → Check etcd health, API server logs  
+## 2) Runbook: Step-by-Step
 
----
-
-🔎 **Step 1: Gather Info**
-```bash
-kubectl get pods -n {{ namespace | default("default") }} -o wide
-kubectl describe pod {{ pod_name | default("my-pod") }} -n {{ namespace | default("default") }}
-kubectl logs {{ pod_name | default("my-pod") }} -n {{ namespace | default("default") }}
-```
-
----
-
-🕵️ **Step 2: Common Root Causes**
-- ❗ Probe misconfig (readiness/liveness failing)  
-- ❗ Bad image / missing secret  
-- ❗ Insufficient CPU/memory → OOMKilled  
-- ❗ PVC not bound to node  
-- ❗ DNS/Service resolution failing  
-- ❗ Crash in entrypoint or env vars  
-- ❗ Node pressure (disk, memory, PID limits)  
-
----
-
-🛠️ **Step 3: Fix Strategies**
-
-**Probes**
-```bash
-kubectl edit deployment {{ name | default("app") }} -n {{ namespace | default("default") }}
-kubectl rollout restart deployment {{ name | default("app") }} -n {{ namespace | default("default") }}
-```
-
-**Image Issues**
-```bash
-kubectl get secret -n {{ namespace | default("default") }}
-kubectl set image deployment/{{ name | default("app") }} {{ container | default("app-container") }}=repo/image:stable -n {{ namespace | default("default") }}
-```
-
-**Resource Issues**
-```bash
-kubectl top pod {{ pod_name | default("my-pod") }} -n {{ namespace | default("default") }}
-kubectl edit deployment {{ name | default("app") }} -n {{ namespace | default("default") }}
-```
-
-**PVC / Storage**
-```bash
-kubectl get pvc -n {{ namespace | default("default") }}
-kubectl describe pvc my-pvc -n {{ namespace | default("default") }}
-kubectl get sc
-```
-
-**Networking / DNS**
-```bash
-kubectl exec -it {{ pod_name | default("my-pod") }} -n {{ namespace | default("default") }} -- nslookup kubernetes.default
-kubectl get networkpolicy -n {{ namespace | default("default") }}
-kubectl logs -n kube-system -l k8s-app=kube-dns
-```
-
-**Node Issues**
-```bash
-kubectl get nodes
-kubectl describe node <node-name>
-kubectl logs kubelet -n kube-system
-```
-
-**Control Plane (API / etcd)**
-```bash
-kubectl get componentstatuses
-kubectl -n kube-system get pods | grep etcd
-kubectl logs etcd-<node> -n kube-system
-```
-
----
-
-✅ **Step 4: Verification**
-```bash
-kubectl rollout status deployment {{ name | default("app") }} -n {{ namespace | default("default") }}
+### a) Pod Failing to Start
+\`\`\`bash
 kubectl get pods -n {{ namespace | default("default") }}
-kubectl logs -f deployment/{{ name | default("app") }} -n {{ namespace | default("default") }}
-```
+kubectl describe pod {{ pod | default("sample-pod") }} -n {{ namespace | default("default") }}
+kubectl logs {{ pod | default("sample-pod") }} -n {{ namespace | default("default") }} --previous
+\`\`\`
+- Check for `ImagePullBackOff` → validate registry access & credentials  
+- Check for `CrashLoopBackOff` → review app/container logs  
+
+### b) Networking / DNS Issues
+\`\`\`bash
+kubectl exec -it {{ pod | default("sample-pod") }} -n {{ namespace | default("default") }} -- nslookup kubernetes.default
+kubectl exec -it {{ pod | default("sample-pod") }} -n {{ namespace | default("default") }} -- curl -vk https://service:port
+\`\`\`
+- Validate CoreDNS pods are healthy (`kubectl get pods -n kube-system -l k8s-app=kube-dns`)  
+- Ensure NetworkPolicy/Calico/Cilium rules are not blocking  
+
+### c) Resource Pressure
+\`\`\`bash
+kubectl top pod -n {{ namespace | default("default") }}
+kubectl describe node
+\`\`\`
+- Look for `OOMKilled` or CPU throttling → tune resource requests/limits  
+- Consider Horizontal/Vertical Pod Autoscaler  
+
+### d) Storage / Volume Issues
+\`\`\`bash
+kubectl describe pvc {{ pvc | default("mypvc") }} -n {{ namespace | default("default") }}
+kubectl get events -n {{ namespace | default("default") }} | grep pvc
+\`\`\`
+- Ensure underlying StorageClass is available  
+- Check RWX/RWO access modes match usage  
 
 ---
 
-🛡️ **Step 5: Prevention**
-- Always define requests/limits  
-- Use immutable image tags  
-- Configure probes carefully  
-- Add HPA + PDB for resilience  
-- Enable logging/metrics (Prometheus, Grafana, Loki, ELK, Datadog)  
-- Rotate and secure secrets  
+## 3) Observability Hooks
+- **Logs**: Centralised aggregation with ELK/Loki, searchable by pod/namespace  
+- **Metrics**: Prometheus/Grafana for CPU, memory, network, request latency  
+- **Tracing**: Jaeger or OpenTelemetry for cross-service failures  
+- **Dashboards**: Live SLO/SLA view for latency, error rates, availability  
 
 ---
 
-⚠️ **Anti-Patterns**
-- Blindly deleting pods  
-- Running containers as root  
-- No probes or metrics  
-- Using `:latest` tags in prod  
+## 4) Risks & Trade-offs
+- ❌ Manual debugging delays MTTR → ✅ Automate via runbooks, alerts, ChatOps  
+- ❌ Over-provisioned pods → ✅ Cost impact, rightsize with HPA/VPA  
+- ❌ Lack of RBAC → ✅ On-call blocked → create least-privilege troubleshooting role  
+- ❌ Debugging in prod with `exec` → ✅ Prefer `kubectl debug` ephemeral containers  
 
 ---
 
-{% if mode == "pro_sre" %}
-{% include "snippets_pro_sre/deep_debug.jinja2" ignore missing %}
-{% include "snippets_pro_sre/chaos_tests.jinja2" ignore missing %}
-{% endif %}
+## 5) Compliance & Governance
+- Maintain **audit logs** of troubleshooting commands (ISO27001/GDPR)  
+- Redact **sensitive data** before exporting logs to SIEM  
+- Enforce **RBAC + MFA** for kubectl access in prod  
+- Ensure IaC (Terraform/Helm) captures any config changes → avoid drift  
 
 ---
-### [END_OF_TROUBLESHOOT_PLAYBOOK]
+
+## 6) Quick Wins
+- Add **liveness/readiness probes** → stop routing to broken pods  
+- Enable **Vertical Pod Autoscaler** → reduce OOM kills  
+- Use **ephemeral debug containers** instead of exec into prod workloads  
+- Automate **top 5 playbooks** as Slack/Teams ChatOps commands  
+- Build **chaos drills** (node drain, pod kill) to validate resilience  
+
+[END OF TEMPLATE]

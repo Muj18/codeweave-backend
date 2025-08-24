@@ -1,9 +1,15 @@
 TEMPLATE_MAP = {
-    # Cloud & Infrastructure
-    "aws": "solutions_architecture.jinja2",
-    "azure": "solutions_architecture.jinja2",
-    "gcp": "solutions_architecture.jinja2",
-    "others (infra)": "solutions_architecture.jinja2",
+     # Cloud Architecture (big-picture design)
+    "aws_arch": "solutions_architecture.jinja2",
+    "azure_arch": "solutions_architecture.jinja2",
+    "gcp_arch": "solutions_architecture.jinja2",
+    "others_arch": "solutions_architecture.jinja2",
+
+    # Cloud Quick Tasks (all point to the same template)
+    "aws_quick": "cloud_quick_task.jinja2",
+    "azure_quick": "cloud_quick_task.jinja2",
+    "gcp_quick": "cloud_quick_task.jinja2",
+    "others_quick": "cloud_quick_task.jinja2",
 
     # Infrastructure as Code & Automation
     "terraform": "terraform_playbook.jinja2",

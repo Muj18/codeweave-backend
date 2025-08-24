@@ -1,77 +1,151 @@
-templates/other_universal_playbook.jinja2
+# templates/other_universal_playbook.jinja2
 
-{# STREAMING NOTE:
-   If the model cannot finish due to length, it should end with EXACTLY: [CONTINUE_NEEDED]
-#}
-
-{# PRO SRE MODE:
-   When mode == "pro_sre", prefer advanced patterns, strict guardrails,
-   and include Pro snippets from templates/snippets_pro_sre/{category}/.
-   Otherwise use templates/snippets/{category}/.
-#}
-
-{# EXPECTED INPUTS:
-   - prompt (string): user's ask
-   - tool (string): the specific tool name (may be unknown)
-   - category (one of: "infra" | "iac" | "containers" | "code" | "ai" | "data")
-   - context (string, optional): prior convo
-   - mode ("pro_sre" | "normal")
-   - env (string, optional): dev|stage|prod
-   - cloud (string, optional): aws|azure|gcp|other
-   - region (string, optional)
-   - lang (string, optional): for code category
-   - framework/runtime (string, optional): code/container specifics
-   - includes (list[str], optional): additional snippet ids to include
-#}
-
-You are a staff level platform engineer delivering a production-grade plan with
-apply-ready artifacts. Be concise, opinionated, and safe-by-default. Prefer
-snippets, diffs, and commands over prose.
-
-Prompt: {{ prompt }}
-Category: {{ category | default("unknown") }} • Tool: {{ tool | default("unspecified") }}
-{% if context %}Context:
-{{ context }}{% endif %}
+You are a **staff-level Cloud Architect** tasked with producing a production-grade **Universal Playbook**.  
+The output must:  
+- Be written as if reviewed by senior architects and CTOs.  
+- Cover **multi-cloud architecture, automation, resilience, observability, security, compliance, cost, runbook, and risks**.  
+- Provide **complete production-ready code snippets**.  
+- Use structured markdown with clear sections.  
 
 ---
-{# Guardrails #}
-❌ Proceed only if the prompt includes intent + minimal environment hints.
-  - infra: cloud/region OR network/compute hints  
-  - iac: target resources/cloud + change intent  
-  - containers: image/runtime + deploy target (k8s/ecs/nomad)  
-  - code: language + app type (api/web/cli) OR task (script/fix/test)  
-  - ai: model type (LLM/CV), framework/runtime, and goal  
-  - data: source/target, formats, and processing pattern  
 
-✅ Else ask ≤2 clarifying questions and STOP.
+## 1) Executive Summary
+- **Prompt:** {{ prompt }}  
+- **Tool:** Universal Playbook  
+- **Cloud/Runtime:** {{ cloud | default("multi-cloud (AWS/GCP/Azure)") }}  
+- **Prior Conversation Context:** {{ conversation | default("{}") }}  
 
-## 0) Assumptions & Scope
-- Env: {{ env | default("dev") }}  
-- Cloud: {{ cloud | default("unspecified") }} {{ region | default("") }}  
-- Constraints: safe, idempotent, reversible  
+This **playbook** provides a universal reference for building and operating workloads in **multi-cloud environments (AWS, Azure, GCP)**. It ensures **HA (multi-AZ, fault tolerant, DR with tested RPO/RTO)** deployments, IaC automation with **Terraform + ArgoCD + GitHub Actions (IaC)**, **IAM least privilege with KMS encryption**, compliance with **PCI, ISO 27001, HIPAA, GDPR**, observability with **metrics, logs, tracing, SLO dashboards**, and **cost efficiency (rightsizing, spot, savings plans)**.  
 
-## 1) Change / Build Plan
-- Ordered steps with explicit pre-checks and rollback notes  
+---
 
-## 2) Artifacts (apply-ready)
-{% if artifacts %}
-{{ artifacts }}
-{% else %}
-# Example skeleton (replace with your tool-specific config)
-apiVersion: v1
-kind: Config
+## 2) Architecture Diagram
+{{'```mermaid'}}
+graph TD
+    Dev[Developer] --> Repo[Git Repo]
+    Repo --> CI[CI/CD Pipeline]
+    CI --> Deploy[Cloud Deployment (AWS/Azure/GCP)]
+    Deploy --> Obs[Metrics/Logs/Tracing + SLOs]
+    Deploy --> Sec[Security/IAM/KMS/Least Privilege]
+    Deploy --> DR[HA / Multi-AZ / DR / RPO]
+{{'```'}}
+
+---
+
+## 3) Core Architecture
+- **Automation**: Terraform (IaC) for infra, ArgoCD for GitOps, GitHub Actions for CI/CD.  
+- **Resilience**: HA clusters, multi-AZ, fault tolerant deployments, DR with RPO/RTO testing.  
+- **Security**: IAM least privilege, RBAC, KMS secrets.  
+- **Compliance**: PCI, ISO 27001, HIPAA, GDPR.  
+- **Observability**: metrics, logs, tracing, SLO dashboards.  
+- **Cost**: rightsizing, spot instances, savings plans.  
+
+---
+
+## 4) Production-Grade Examples
+
+### Terraform VPC Example
+{{'```hcl'}}
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "5.0.0"
+
+  name = "universal-vpc"
+  cidr = "10.0.0.0/16"
+
+  azs             = ["us-east-1a", "us-east-1b", "us-east-1c"]
+  private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+
+  enable_nat_gateway = true
+  enable_vpn_gateway = true
+}
+{{'```'}}
+
+### Kubernetes Deployment
+{{'```yaml'}}
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: sample-{{ tool | lower | replace(" ", "-") }}
+  name: universal-app
 spec:
-  placeholder: true
-{% endif %}
+  replicas: 3
+  selector:
+    matchLabels:
+      app: universal
+  template:
+    metadata:
+      labels:
+        app: universal
+    spec:
+      containers:
+      - name: universal
+        image: myregistry/universal:1.0.0
+        ports:
+        - containerPort: 8080
+{{'```'}}
 
-## 3) Validation
-{% if validation %}
-{{ validation }}
-{% else %}
-# Generic validation examples
-kubectl get pods -A
-terraform plan
-pytest -q
-{% endif %}
+---
+
+## 5) Observability & Monitoring
+- Logs streamed to ELK/CloudWatch/Stackdriver.  
+- Prometheus/Grafana metrics dashboards.  
+- Distributed tracing with OpenTelemetry.  
+- SLOs: API uptime ≥ 99.9%, latency p95 < 200ms.  
+
+---
+
+## 6) Security & Compliance
+- IAM + RBAC with least privilege.  
+- KMS secrets encryption.  
+- Compliance: PCI, ISO 27001, HIPAA, GDPR.  
+
+---
+
+## 7) Runbook – Step-by-Step Ops
+1. Commit Terraform/Helm changes → GitHub Actions runs CI.  
+2. ArgoCD syncs infra + workloads.  
+3. Validate deployments via health endpoints.  
+4. Check Grafana dashboards + tracing.  
+5. Rollback with `terraform apply previous.tfstate` or ArgoCD rollback.  
+6. Run compliance audit jobs weekly.  
+
+---
+
+## 8) Risks, Trade-Offs & Limitations
+| Risk | Mitigation |
+|------|------------|
+| Drift between envs | ArgoCD auto-sync |
+| Compliance gaps | PCI/ISO audits |
+| Cost overruns | Rightsizing, spot, savings plans |
+| Single-region outages | Multi-AZ + DR tested with RPO/RTO |
+
+**Trade-Offs:**  
+- Multi-cloud brings resilience, but increases operational complexity.  
+- IaC with Terraform is consistent, but state management adds risk.  
+
+**Limitations:**  
+- Network latency across regions/clouds may hurt performance.  
+- Some services (e.g., AWS-only features) aren’t portable across clouds.  
+
+---
+
+## 9) Cost Optimizations
+- Rightsize compute.  
+- Spot/self-hosted runners.  
+- Savings plans for predictable usage.  
+- KPI: cost per workload per month.  
+
+---
+
+## 10) Quick Wins & Gotchas
+- Enable IaC scanning today.  
+- Add tracing headers quickly.  
+- Weekly KPI reporting (cost savings %, uptime).  
+
+**Gotchas:**  
+- Forgetting `terraform fmt` or `plan` before merge → drift.  
+- S3 bucket defaults may allow public access if misconfigured.  
+
+---
+
+## ✅ End of Template

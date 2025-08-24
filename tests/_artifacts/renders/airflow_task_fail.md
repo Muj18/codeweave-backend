@@ -1,0 +1,76 @@
+### Airflow Task Failure Troubleshooting — Production-Grade
+
+**Key Symptoms**
+- Task stuck in `failed` state despite retries
+- Logs show `ModuleNotFoundError`, dependency import errors, or connection issues
+- Downstream tasks blocked due to dependency chain failures
+- DAG not progressing past a failed task or stuck in queued state
+
+**Immediate Triage**
+- Inspect task logs: `airflow logs <dag_id> <task_id>`
+- Validate DAG syntax and discoverable tasks: `airflow dags list` / `airflow tasks list <dag_id>`
+- Confirm worker environment has all required Python packages and correct Airflow version
+- Check Airflow scheduler, webserver, and worker health, plus any queue backlogs
+- Confirm external connections (DB, API, S3, etc.) are reachable and credentials valid
+
+**Safe Fix — Example DAG with Production Best Practices**
+```python
+from datetime import datetime, timedelta
+from airflow import DAG
+from airflow.operators.python_operator import PythonOperator
+import logging
+
+# --- Sample Task Function with Detailed Logging ---
+def sample_task(**kwargs):
+    task_instance = kwargs.get("ti")
+    dag_id = kwargs.get("dag").dag_id
+    task_id = kwargs.get("task").task_id
+    logging.info(f"Executing task {task_id} in DAG {dag_id}")
+    # Example of safe operation
+    try:
+        # Replace with real ETL logic or dbt invocation
+        logging.info("Task executed successfully")
+    except Exception as e:
+        logging.error(f"Error during task execution: {e}")
+        raise  # Ensures Airflow records failure and triggers retry
+
+# --- Default Arguments for Production DAGs ---
+default_args = {
+    "owner": "data_engineering_team",
+    "depends_on_past": False,       # Avoid blocking downstream tasks due to past failures
+    "email_on_failure": True,       # Notify on failure
+    "email_on_retry": False,
+    "retries": 3,                   # Controlled retry mechanism
+    "retry_delay": timedelta(minutes=5),
+    "execution_timeout": timedelta(minutes=30),  # Fail task if it runs too long
+    "catchup": False,               # Avoid backfilling unless intended
+    "provide_context": True,
+}
+
+# --- DAG Definition ---
+with DAG(
+    dag_id="production_ready_example_dag",
+    start_date=datetime(2025, 1, 1),
+    schedule_interval="@daily",
+    default_args=default_args,
+    max_active_runs=1,               # Prevent overlapping runs for resource-heavy DAGs
+    tags=["production", "etl", "data-engineering"]
+) as dag:
+
+    # --- Python Task with Logging & Retry ---
+    task = PythonOperator(
+        task_id="sample_task",
+        python_callable=sample_task,
+        retries=default_args["retries"],
+        retry_delay=default_args["retry_delay"],
+    )
+
+# --- Optional: DAG-level Monitoring Hook ---
+# from airflow.operators.email_operator import EmailOperator
+# notify = EmailOperator(
+#     task_id="notify_failure",
+#     to="team@example.com",
+#     subject="DAG Failure Alert",
+#     html_content="Check Airflow UI for details",
+# )
+# task >> notify

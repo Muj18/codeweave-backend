@@ -1,0 +1,83 @@
+
+You are a staff-level Platform Engineer writing a **Dockerfile Best Practices Playbook**.  
+The output should be production-grade and highlight security, cost, and maintainability.
+
+Prompt: sample-prompt
+Tool: Docker / Containers
+
+---
+## 1) Executive Summary
+- Goal: ensure Docker images are **secure, small, cache-friendly, and compliant**.  
+- Audience: DevOps/Platform teams building production images.  
+- Benefits: reduced attack surface, faster CI/CD, lower storage/network cost.  
+
+---
+## 2) Example Architecture Diagram
+```mermaid
+graph TD
+  Dev[Developer] --> Build[CI/CD Build]
+  Build --> Image[Hardened Docker Image]
+  Image --> Registry[Private Registry: ECR/ACR/GCR]
+  Registry --> Deploy[Kubernetes/ECS/Nomad]
+  Deploy --> Observability[Logs/Metrics/Tracing]
+```
+
+---
+## 3) Best Practices
+
+### a) Base Images
+- Use minimal images (`distroless`, `alpine`, or official slim variants).  
+- Pin versions (`FROM python:3.11-slim`).  
+- Avoid `latest` tag to ensure reproducibility.  
+
+### b) Security
+- Drop root user:  
+  ```dockerfile
+  USER appuser
+  ```
+- Run `apt-get update && apt-get install` in one layer → clean up caches.  
+- Add image scanning in CI (Trivy, Grype, Anchore).  
+- Use multi-stage builds to exclude build tools.  
+
+### c) Performance / Caching
+- Order layers from least → most frequently changed (e.g., deps before app code).  
+- Use `.dockerignore` to exclude unnecessary files.  
+- Leverage build cache in CI.  
+
+### d) Observability
+- Add healthcheck:  
+  ```dockerfile
+  HEALTHCHECK CMD curl -f http://localhost:8080/health || exit 1
+  ```
+- Structured logs → stdout/stderr (no log files in containers).  
+
+### e) Compliance
+- Ensure images are signed (Cosign, Notary v2).  
+- Retain image SBOM (Software Bill of Materials).  
+- Store build provenance for audits (SLSA/Supply Chain Security).  
+
+---
+## 4) Runbook: Step-by-Step
+1. Developer proposes a new Dockerfile.  
+2. CI job lints with **hadolint**.  
+3. Security scan blocks if CVEs > threshold.  
+4. Build & push to private registry with immutable tags.  
+5. Deploy via GitOps to staging.  
+6. Audit logs stored (who built, what commit, SBOM attached).  
+
+---
+## 5) Risks & Trade-offs
+❌ Using `latest` → non-deterministic builds → ✅ pin exact versions.  
+❌ Root user → privilege escalation → ✅ use non-root.  
+❌ Large images → slow builds/deploys → ✅ multi-stage + slim base.  
+❌ Proprietary base images → vendor lock-in → ✅ prefer official/minimal.  
+
+---
+## 6) Quick Wins
+- Switch to multi-stage builds immediately.  
+- Add `hadolint` pre-commit hook.  
+- Scan images nightly with Trivy.  
+- Enforce immutable tags (`1.0.0`, git SHA).  
+- Store SBOM alongside artifact.  
+
+[END OF TEMPLATE]

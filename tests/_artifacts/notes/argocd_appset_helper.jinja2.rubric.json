@@ -1,0 +1,11 @@
+{
+  "total": 12,
+  "breakdown": {
+    "playbook_steps": 4,
+    "playbook_observability": 3,
+    "playbook_risks": 3,
+    "playbook_wow": 2
+  },
+  "max": 12,
+  "threshold": 7
+}

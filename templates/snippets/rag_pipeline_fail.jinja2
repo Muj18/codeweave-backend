@@ -14,22 +14,22 @@
 - Validate prompt template includes retrieved context when sent to LLM
 
 **Safe Fix**
-    ```python
-    # Example: RAG pipeline with context injection
-    def rag_query(llm, vector_db, query):
-        # Retrieve top 5 most relevant docs
-        docs = vector_db.similarity_search(query, k=5)
+~~~python
+# Example: RAG pipeline with context injection
+def rag_query(llm, vector_db, query):
+    # Retrieve top 5 most relevant docs
+    docs = vector_db.similarity_search(query, k=5)
 
-        context = "\n\n".join([d.page_content for d in docs])
-        prompt = f"""
-        Use the following context to answer the question.
-        Context:
-        {context}
+    context = "\n\n".join([d.page_content for d in docs])
+    prompt = f"""
+    Use the following context to answer the question.
+    Context:
+    {context}
 
-        Question: {query}
-        """
-        return llm(prompt)
-    ```
+    Question: {query}
+    """
+    return llm(prompt)
+~~~
 
 **Cloud & Platform Notes**
 - Monitor vector DB query latency (P95/P99)

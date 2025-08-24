@@ -1,0 +1,22 @@
+# tests/snippet_rubric.yaml
+
+snippet_runbook:
+  points: 3
+  any_of:
+  - - runbook
+  - - step-by-step
+  - - troubleshooting
+
+snippet_observability:
+  points: 2
+  any_of:
+  - - logs
+  - - metrics
+  - - tracing
+
+snippet_risks:
+  points: 2
+  any_of:
+  - - risks
+  - - gotchas
+  - - pitfalls

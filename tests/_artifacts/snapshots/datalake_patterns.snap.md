@@ -1,0 +1,108 @@
+# templates/datalake_patterns.jinja2
+
+You are a **staff-level Data Architect** tasked with producing a production-grade **Data Lake Patterns Playbook**.  
+The output must:  
+- Be written as if reviewed by senior architects and CTOs.  
+- Cover **lakehouse and medallion patterns** (raw → bronze → silver → gold).  
+- Include **multi-cloud storage (AWS S3, Azure Data Lake, GCP GCS)**, **automation (IaC, Terraform, GitHub Actions, ArgoCD)**, **resilience (HA, multi-AZ, DR)**, **observability (logs, metrics, tracing, SLOs)**, **security & compliance (IAM, RBAC, encryption, PCI, ISO 27001, HIPAA, GDPR)**, **cost optimization (tiered storage, lifecycle, spot/savings plans)**, **risks**, **runbook**, and **quick wins/gotchas**.  
+- Provide **complete SQL/PySpark/Terraform snippets**.  
+- Use structured markdown with clear sections.  
+
+---
+
+## 1) Executive Summary
+- **Prompt:** sample-prompt  
+- **Tool:** Data Lake Patterns Playbook  
+- **Cloud/Runtime:** sample-cloud  
+- **Prior Conversation Context:** sample-conversation  
+
+This playbook defines **data lake/lakehouse best practices** for multi-cloud platforms, ensuring automation, resilience, observability, compliance, and cost efficiency.  
+
+---
+
+## 2) Architecture Diagram
+```mermaid
+graph TD
+    Raw[Raw Ingestion] --> Bronze[Bronze Layer]
+    Bronze --> Silver[Silver Layer]
+    Silver --> Gold[Gold Layer]
+    Gold --> BI[BI / ML / Analytics]
+    Bronze --> Obs[Metrics/Logs/Tracing/SLOs]
+    Bronze --> Sec[Security/IAM/KMS/Compliance]
+    Bronze --> DR[HA / Multi-AZ / DR]
+```
+
+---
+
+## 3) Core Architecture
+- **Automation**: Terraform + CI/CD to provision buckets, pipelines.  
+- **Resilience**: multi-AZ storage replication, DR tested with RPO/RTO.  
+- **Security**: IAM least privilege, encryption at rest + TLS in transit.  
+- **Compliance**: PCI, ISO 27001, HIPAA, GDPR.  
+- **Observability**: ingestion counts, pipeline latency metrics, tracing flows, SLO dashboards.  
+- **Cost**: tiered storage (S3 Standard → Glacier), lifecycle policies, spot jobs.  
+
+---
+
+## 4) Production-Grade Examples
+
+### PySpark Transformation (Silver Layer)
+```python
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder.appName("silver_transform").getOrCreate()
+
+df = spark.read.parquet("s3://lake/bronze/orders/")
+df = df.dropDuplicates(["order_id"]).withColumnRenamed("ts", "created_at")
+
+df.write.mode("overwrite").parquet("s3://lake/silver/orders/")
+```
+
+### Terraform for Lake Storage
+```hcl
+resource "aws_s3_bucket" "bronze" {
+  bucket = "acme-lake-bronze"
+}
+
+resource "aws_s3_bucket_versioning" "bronze_versioning" {
+  bucket = aws_s3_bucket.bronze.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+```
+
+---
+
+## 5) Runbook – Step-by-Step
+1. Ingest raw data → store in bronze.  
+2. Transform bronze → silver with deduplication.  
+3. Curate silver → gold for BI/ML.  
+4. Monitor metrics, logs, tracing, and SLO dashboards.  
+5. Validate encryption + compliance controls.  
+
+---
+
+## 6) Risks, Trade-Offs & Limitations
+| Risk | Mitigation |
+|------|------------|
+| Storage cost explosion | Lifecycle policies + tiering |
+| Data quality issues | Automated `dbt test` + data contracts |
+| Compliance gaps | Weekly audits + logs |
+| Latency spikes | Auto-scaling jobs + retries |
+
+---
+
+## 7) Quick Wins & Gotchas
+- Enable lifecycle → cost ↓ immediately.  
+- Add row count checks in silver.  
+- Automate KPI dashboards (cost per TB, SLA latency).  
+- KPI: reduce cost/TB by 30%.  
+
+**Gotchas:**  
+- Poor schema evolution planning leads to downstream failures.  
+- Inconsistent partitioning causes skew in Spark jobs.  
+
+---
+
+## ✅ End of Template

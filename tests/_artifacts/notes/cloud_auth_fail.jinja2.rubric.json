@@ -1,0 +1,10 @@
+{
+  "total": 3,
+  "breakdown": {
+    "snippet_runbook": 3,
+    "snippet_observability": 0,
+    "snippet_risks": 0
+  },
+  "max": 7,
+  "threshold": 3
+}

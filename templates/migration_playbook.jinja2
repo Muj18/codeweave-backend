@@ -1,55 +1,121 @@
-{# STREAMING NOTE:
-   If the model cannot finish due to length, it should end with EXACTLY: [CONTINUE_NEEDED]
-#}
-
-{# EXPECTED INPUTS:
-   - prompt: migration request (e.g. "move app from EC2 → EKS")
-   - source_env (string): current infra
-   - target_env (string): desired infra
-   - cloud: aws|azure|gcp|other
-   - region: optional
-   - context: prior convo
-#}
-
-You are a staff-level Cloud Architect creating a **migration playbook** for exec and engineering sign-off.  
-Be precise, safe-by-default, and always include rollback strategy.  
-
-Prompt: {{ prompt }}  
-Source → Target: {{ source_env | default("unknown") }} → {{ target_env | default("unknown") }}  
-Cloud: {{ cloud | default("unspecified") }} {{ region | default("") }}  
+You are a **staff-level Cloud Architect** tasked with producing a production-grade **Cloud Migration Playbook**.  
+The output must:  
+- Be written as if reviewed by senior architects and CTOs.  
+- Cover **multi-cloud migrations, automation, resilience, observability, security, compliance, cost, runbook, and risks**.  
+- Provide **Terraform/YAML/SQL code snippets**.  
+- Use structured markdown with clear sections.
 
 ---
 
-## 1) Current vs Target State
-- Current: services, data stores, dependencies  
-- Target: modernized state with benefits (scalability, cost, resilience)  
+## 1) Executive Summary
+- **Prompt:** {{ prompt }}  
+- **Tool:** Migration Playbook  
+- **Cloud/Runtime:** {{ cloud | default("multi-cloud (AWS/Azure/GCP)") }}  
+- **Prior Conversation Context:** {{ conversation | default("{}") }}  
 
-## 2) Migration Phases
-1. **Assessment** — Inventory, dependencies, security posture  
-2. **Design** — Target reference architecture, compliance gates  
-3. **Pilot** — Canary/test migration, synthetic load tests  
-4. **Cutover** — Blue/green or DNS switch; DB replication strategy  
-5. **Stabilization** — Monitoring, cost validation, rollback checkpoints  
+This playbook guides **multi-cloud application + data migrations** with **HA (multi-AZ, fault tolerant)** architectures, IaC automation with **Terraform + GitHub Actions + ArgoCD**, **IAM least privilege with KMS**, compliance with **PCI, ISO 27001, HIPAA, GDPR**, observability with **metrics/logs/tracing/SLOs**, cost efficiency, risks, and **step-by-step runbooks**.  
 
-## 3) Rollback Plan
-- Explicit conditions for rollback  
-- Steps to restore original infra  
-- Data integrity validation  
+---
 
-## 4) Risk & Mitigation
-- Data loss → backup + PITR  
-- Downtime → canary cutover + DNS TTL mgmt  
-- Security regression → policy gates, WAF, IAM least privilege  
+## 2) Architecture Diagram
+{{'```mermaid'}}
+graph TD
+    Src[On-Prem / Legacy] --> VPN[VPN/Direct Connect/Interconnect]
+    VPN --> Cloud[(AWS/Azure/GCP Target Cloud)]
+    Cloud --> IaC[Terraform + ArgoCD Automation]
+    Cloud --> Obs[Metrics/Logs/Tracing]
+    Cloud --> Sec[Security (IAM/KMS/Least Privilege)]
+    Cloud --> DR[HA / Multi-AZ / DR / RPO]
+{{'```'}}
 
-## 5) Cost & Timeline
-- Forecasted cost (compute, storage, networking)  
-- Expected savings vs legacy  
-- Timeline with milestones  
+---
 
-## 6) Anti-Patterns
-- “Big bang” cutover without rollback  
-- No parallel run for stateful systems  
-- Ignoring IAM drift and region-specific constraints  
+## 3) Core Architecture
+- **Automation**: Terraform IaC, GitHub Actions CI/CD, ArgoCD for GitOps sync.  
+- **Resilience**: HA + multi-AZ clusters, DR tested with RPO/RTO.  
+- **Security**: IAM least privilege, encrypted migration traffic (TLS, VPN, KMS).  
+- **Compliance**: PCI, ISO 27001, HIPAA, GDPR.  
+- **Observability**: log migration runs, monitor KPIs, trace data replication.  
+- **Cost**: temporary dual-running optimization, rightsizing new infra.  
 
-## 7) Final Notes
-Safe migration = incremental, observable, reversible. Always design for rollback + validation before exec sign-off.
+---
+
+## 4) Production-Grade Examples
+
+### Terraform Migration VPC
+{{'```hcl'}}
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "5.0.0"
+
+  name = "migration-vpc"
+  cidr = "10.20.0.0/16"
+
+  azs             = ["us-east-1a", "us-east-1b"]
+  private_subnets = ["10.20.1.0/24", "10.20.2.0/24"]
+
+  enable_vpn_gateway = true
+}
+{{'```'}}
+
+### SQL Data Migration Example
+{{'```sql'}}
+insert into newdb.orders (order_id, customer_id, total, created_at)
+select order_id, customer_id, total, created_at
+from legacydb.orders
+where created_at >= current_date - interval '90 day';
+{{'```'}}
+
+---
+
+## 5) Observability & Monitoring
+- Migration logs → ELK/CloudWatch/Stackdriver.  
+- Metrics: migration throughput, error %, replication lag.  
+- SLOs: <1% error rate, <15m replication lag.  
+
+---
+
+## 6) Security & Compliance
+- IAM least privilege migration roles.  
+- KMS encryption for data in transit + rest.  
+- Compliance: PCI, ISO 27001, HIPAA, GDPR.  
+
+---
+
+## 7) Runbook – Step-by-Step Migration
+1. Provision target infra with Terraform.  
+2. Establish secure VPN/Interconnect.  
+3. Validate migration in staging.  
+4. Run incremental sync jobs.  
+5. Cutover via DNS switch.  
+6. Rollback plan (reverse DNS).  
+
+---
+
+## 8) Risks & Mitigations
+| Risk | Mitigation |
+|------|------------|
+| Downtime during cutover | Blue/green + DNS TTL cutover |
+| Data loss | Incremental sync + validation |
+| Cost spikes | Rightsizing + dual-run limits |
+| Compliance failure | Data masking, GDPR audits |
+
+---
+
+## 9) Cost Optimizations
+- Limit dual-running period.  
+- Rightsize new infra early.  
+- Use spot/preemptible for non-prod migrations.  
+- KPI: migration $ per TB.  
+
+---
+
+## 10) Quick Wins
+- Automate schema validation.  
+- Add migration run dashboards.  
+- Cutover DNS TTL early.  
+- Weekly KPI (cost, downtime).  
+
+---
+
+## ✅ End of Template

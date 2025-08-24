@@ -1,0 +1,137 @@
+# templates/other_code_playbook.jinja2
+
+You are a **staff-level Engineer** tasked with producing a production-grade **Code Playbook**.  
+The output must:  
+- Be written as if reviewed by senior architects and CTOs.  
+- Cover **multi-cloud, automation, resilience, observability, security, compliance, cost, runbook, and risks**.  
+- Provide **production-ready code snippets (Python, Go, Node.js, SQL, etc.)**.  
+- Use structured markdown with clear sections.  
+
+---
+
+## 1) Executive Summary
+- **Prompt:** sample-prompt  
+- **Tool:** Code Playbook  
+- **Cloud/Runtime:** sample-cloud  
+- **Prior Conversation Context:** sample-conversation  
+
+This playbook defines coding standards and deployment patterns for **multi-cloud (AWS, Azure, GCP)**. It enforces **HA (multi-AZ, fault tolerant, DR)** systems, IaC automation with **Terraform + GitHub Actions + ArgoCD**, **IAM least privilege with KMS**, compliance with **PCI, ISO 27001, HIPAA, GDPR**, observability with **metrics, logs, tracing, SLOs**, and provides a **step-by-step runbook** with risks, cost, and quick wins.  
+
+---
+
+## 2) Architecture Diagram
+```mermaid
+graph TD
+    Dev[Developer] --> Repo[Git Repo]
+    Repo --> CI[CI/CD Pipeline]
+    CI --> Deploy[App Deployment (AWS/Azure/GCP)]
+    Deploy --> Obs[Metrics/Logs/Tracing + SLOs]
+    Deploy --> Sec[Security (IAM/KMS/Least Privilege)]
+    Deploy --> DR[HA / Multi-AZ / DR / RPO]
+```
+
+---
+
+## 3) Core Architecture
+- **Automation**: Terraform + GitHub Actions + ArgoCD.  
+- **Resilience**: multi-AZ, HA, DR tested with RPO/RTO.  
+- **Security**: IAM least privilege, RBAC, KMS.  
+- **Compliance**: PCI, ISO 27001, HIPAA, GDPR.  
+- **Observability**: metrics, logs, tracing, SLO dashboards.  
+- **Cost**: rightsizing builds, caching, savings plans.  
+
+---
+
+## 4) Production-Grade Examples
+
+### Python Service
+```python
+from flask import Flask
+app = Flask(__name__)
+
+@app.route("/health")
+def health():
+    return {"status": "ok"}, 200
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8080)
+```
+
+### GitHub Actions CI
+```yaml
+name: ci
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - run: pytest
+```
+
+---
+
+## 5) Observability & Monitoring
+- Logs: CloudWatch/Stackdriver/ELK.  
+- Metrics: Prometheus/Grafana.  
+- Tracing: OpenTelemetry.  
+- SLOs: error rate <1%, uptime ≥ 99.9%.  
+
+---
+
+## 6) Security & Compliance
+- IAM least privilege.  
+- KMS encryption.  
+- Compliance: PCI, ISO 27001, HIPAA, GDPR.  
+
+---
+
+## 7) Runbook – Step-by-Step Code Deployment
+1. Write code to standards.  
+2. Push to Git repo.  
+3. CI/CD pipeline builds + tests.  
+4. ArgoCD deploys.  
+5. Monitor metrics + rollback if needed.  
+
+---
+
+## 8) Risks, Trade-Offs & Limitations
+| Risk | Mitigation |
+|------|------------|
+| Unreliable builds | CI/CD with retries |
+| Secret exposure | KMS encryption |
+| Cost overruns | Caching + rightsizing |
+| Downtime | HA, DR, multi-AZ |
+
+**Trade-offs & Limitations:**  
+- Using multi-cloud CI/CD increases complexity vs single-cloud.  
+- ArgoCD GitOps improves reliability, but adds operational overhead.  
+
+---
+
+## 9) Cost Optimizations
+- Rightsize build runners.  
+- Cache dependencies.  
+- Savings plans for steady workloads.  
+- KPI: build cost per run.  
+
+---
+
+## 10) Quick Wins & Gotchas
+- Add `/health` endpoints everywhere.  
+- Enable caching in builds.  
+- Automate rollback runbook.  
+- Weekly KPI tracking.  
+
+**Gotchas:**  
+- Missing dependency pinning leads to non-reproducible builds.  
+- Lack of retry logic in CI/CD causes flaky failures.  
+
+---
+
+## ✅ End of Template

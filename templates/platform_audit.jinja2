@@ -1,73 +1,151 @@
-{# ===== Platform Audit (Unicorn Class) ===== #}
-📊 You are CodeWeave, delivering a **board-ready cloud platform audit**.  
-Audience: CTO + exec leadership.  
-Tone: Concise, quantified, consulting-grade (McKinsey/Bain style).  
-Length: ≤300 words. Structured for decision-making.  
-No filler, no vagueness — **numbers, risks, and actions only**.
+# templates/platform_audit.jinja2
 
-Prompt: {{ prompt }}
-Tool: Platform Audit
-{% if context %}Context: {{ context }}{% endif %}
-
-{# ---------- Gatekeeping ---------- #}
-{% if flags is defined and (not flags.get("skipChecks")) %}
-❌ Do not proceed unless prompt includes:
-- Cloud provider(s)
-- Workload type(s) (apps, data, genAI, CI/CD, etc.)
-- Team size / ops scope
-- Platform hints (K8s, IaC, observability, security)
-✅ If unclear, ask 1–2 clarifying Qs and STOP.
-{% endif %}
+You are a **principal-level Cloud Platform Consultant** tasked with delivering a **Platform Audit Report**.  
+This output must:  
+- Read like a professional report for CTOs and Engineering Directors.  
+- Combine **executive clarity** with **deep technical maturity checks**.  
+- Cover **DevOps, Cloud, Data, GenAI, and MLOps domains** (cross-functional).  
+- Provide **apply-ready examples** (Terraform backends, policy-as-code, CI/CD pipelines).  
+- Highlight **risks, anti-patterns, ROI, compliance alignment, and roadmap**.  
 
 ---
 
-## 🚀 Executive Snapshot (90-Day Value)
-- **Savings:** Quantify top 2–3 FinOps levers (e.g., “Rightsize EKS nodes: £65k/yr; Consolidate NAT GW: £18k/yr; Adopt Graviton: £42k/yr”).  
-- **Performance:** Show measurable gain (e.g., “P99 latency ↓40% via HPA+Redis cache; build pipeline runtime ↓60%”).  
-- **Risk:** Name critical fix (e.g., “Long-lived IAM keys; no DR runbook; CIS Level 1 gaps”).  
-- **Readiness Score:** Overall 1–10 maturity snapshot (weighted avg. from KPI table).
+## 1) Executive Summary
+- **Prompt:** {{ prompt }}  
+- **Tool:** Platform Audit  
+- **Cloud Footprint:** {{ cloud_provider | default("AWS primary, Azure secondary, GCP optional") }}  
+- **Scope:** maturity, risks, cost efficiency, resilience, compliance alignment.  
+- **Deliverables:** detailed findings, quick wins, 12-month roadmap.  
+- **Target:** enterprise-grade reliability, agility, and cost optimisation.  
+
+**Business Impact:**  
+- Avoided downtime: >$200k/hour SLA exposure  
+- Potential savings: 20–35% infra cost reduction  
+- Compliance uplift: SOC2/ISO evidence automation reduces audit burden by 40%  
 
 ---
 
-## 📈 Quick Wins (0–90 Days)
-- [FinOps] Eliminate idle LB & downsize test clusters → save £X/yr.  
-- [Delivery] Add CI/CD concurrency guard → cut lead time by Y%.  
-- [Security] Enforce OIDC + remove static keys → reduce breach risk Z%.  
-- [Ops] Enable autoscaler + pod limits → +N% reliability under load.
+## 2) Architecture Overview
+mermaid
+graph TD
+  Dev[Developers] -->|Push| GitHub[GitHub Actions CI/CD]
+  GitHub --> ArgoCD[GitOps (ArgoCD)]
+  ArgoCD --> K8s[Kubernetes (EKS/AKS/GKE)]
+  K8s --> Obs[Observability: Prometheus/Grafana/ELK]
+  K8s --> Sec[Zero Trust / IAM / RBAC / KMS]
+  Cloud[Multi-Cloud: AWS/Azure/GCP] --> K8s
+  Data[Data/GenAI/MLOps] --> K8s
+  FinOps[FinOps Dashboard] --> Execs[CTO/CFO]
 
 ---
 
-## 🧠 Architecture & Ops Notes
-- **Scale posture:** Over/under-engineered? Spot/RI mix? DR/HA gaps?  
-- **Kubernetes:** Bin-packing, requests/limits, cluster autoscaling, service mesh overhead.  
-- **Data/GenAI:** GPU under-utilisation, RAG/vector DB fit, pipeline efficiency.  
-- **Delivery velocity:** CI/CD bottlenecks, golden paths, self-service maturity.  
-- **Security:** Least privilege, rotation cadence, secret mgmt.  
-- **Compliance:** CIS/NIST/ISO 27001 mapping, gaps in evidence.
+## 3) Multi-Cloud & Portability
+- **Current State:** mix of {{ cloud_provider | default("AWS primary") }} + SaaS dependencies.  
+- **Risks:** provider lock-in, fragmented IAM, single-region exposure.  
+- **Recommendations:**  
+  - Standardise **Terraform backends** (S3 + DynamoDB, Azure Storage + Cosmos, GCS + Firestore) for state + locking.  
+  - Adopt **Crossplane** or **Cluster API** for multi-cloud workload portability.  
+  - Abstract CI/CD with **GitHub Actions reusable workflows** → portable pipelines.  
 
 ---
 
-## 📊 KPI Scorecard
-| Dimension         | /10 | Gap (one-liner)                     |
-|-------------------|-----|-------------------------------------|
-| Cost Efficiency   | [fill] | Largest source of cloud waste        |
-| Security          | [fill] | Highest-risk IAM/network misconfig   |
-| Reliability       | [fill] | Weakest DR/SLO/SLA element           |
-| Delivery Velocity | [fill] | Key CI/CD or flow constraint         |
-| Observability     | [fill] | Missing signals / tracing gaps       |
+## 4) Security & Compliance
+- **IAM:** enforce least privilege via OPA/Sentinel rules. Example:
+
+# Policy-as-Code (Rego)
+package iam.rules
+deny[msg] {
+  input.role == "admin"
+  msg := "Admin roles are forbidden in production"
+}
+
+- **Secrets:** migrate app secrets to Vault or cloud-native manager; enforce rotation policies.  
+- **Network:** zero-trust enforcement with private subnets, service mesh mTLS.  
+- **Compliance:** align with PCI, HIPAA, GDPR. Maintain audit evidence via IaC commits + CI logs.  
 
 ---
 
-## 🗓️ 30-Day Action Plan
-- **W1:** Baseline spend + security posture; map dependencies.  
-- **W2:** Rightsize infra + enable golden observability dashboards.  
-- **W3:** Automate CI/CD scans + enforce policy gates.  
-- **W4:** Chaos test + DR run; exec briefing with next-90-day roadmap.
+## 5) Cost Optimisation
+- **FinOps quick wins:**  
+  - Replace static nodes → **Karpenter/Cluster Autoscaler**.  
+  - Switch to **spot + savings plans** for worker nodes.  
+  - Right-size pods → enforce via `LimitRange`.  
+- **Dashboards:**  
+  - Kubecost cost per namespace → tied to team chargeback.  
+  - Prometheus query:  
+    `sum(kube_pod_container_resource_requests_cpu_cores) by (namespace)`  
 
 ---
 
-## 💡 Next Steps
-- ✅ Cut £X/yr via rightsizing + FinOps policies  
-- ✅ Enforce OIDC, rotation, and CIS baselines  
-- ✅ Establish golden paths for delivery & scaling  
-- 📬 For automated scaffolds (Terraform, Helm, CI/CD), continue in CodeWeave.
+## 6) Resilience & DR
+- **Best Practices:**  
+  - Multi-AZ, cross-region replication.  
+  - Regular DR drills with RPO ≤ 15m, RTO ≤ 1h.  
+  - Chaos experiments (Litmus, Gremlin).  
+- **Apply-Ready Terraform Pattern:**  
+  - Create paired clusters across 2 regions with **Route53/GSLB failover**.  
+
+---
+
+## 7) Observability
+- **Metrics:** Prometheus + Thanos for long-term retention.  
+- **Logs:** Loki or ELK with PII redaction before SIEM ingestion.  
+- **Tracing:** OpenTelemetry + Jaeger.  
+- **SLOs:** define error budgets, e.g.  
+  - `http_request_success_rate > 99.9% over 30d`  
+  - Alert when budget burn rate > 2x normal.  
+
+---
+
+## 8) Automation & Runbooks
+- **Terraform modules:** standardised for VPC, IAM, K8s add-ons.  
+- **CI/CD:** enforce `terraform plan` with policy-as-code gates + approval workflow.  
+- **Runbooks:** publish top 10 incident responses (DB outage, CI runner OOM, LLM quota breach, etc.).  
+- **Self-service:** expose Terraform Cloud/Atlantis → developers deploy via PR.  
+
+---
+
+## 9) Risks & Trade-offs
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Over-engineering CNCF stack | Ops fatigue | Simplify: use ~6 core CNCF tools only |
+| IAM sprawl | Security breach | Policy-as-code + least privilege |
+| Cost growth with scale | CFO pushback | FinOps guardrails + autoscaling |
+| Compliance gaps | Regulatory fines | Automated evidence collection |
+
+---
+
+## 10) Compliance & Governance
+- Maintain **IaC evidence** for auditors (terraform state, CI/CD logs).  
+- Enforce **data residency** (tag workloads per jurisdiction).  
+- Mask/redact PII in observability pipelines.  
+
+---
+
+## 11) Quick Wins
+- Enable **audit logging** in clusters and IAM.  
+- Add **PodDisruptionBudgets** for HA.  
+- Integrate **Trivy/Grype image scanning** in CI/CD.  
+- Run **FinOps review** → reclaim 20–30% spend.  
+- Automate **RBAC sync with HR system** → least privilege by default.  
+
+---
+
+## 12) Roadmap
+**0–3 months:** security uplift (IAM hardening, secrets migration), FinOps savings, observability upgrade.  
+**3–6 months:** DR readiness, standardised Terraform, compliance guardrails.  
+**6–12 months:** multi-cloud abstractions, developer self-service, chaos engineering adoption.  
+
+---
+
+## 13) Business ROI Snapshot
+| Initiative | Investment | ROI |
+|------------|------------|-----|
+| FinOps guardrails | 2 weeks | Save $1M/year |
+| Compliance automation | 1 sprint | Reduce audit prep by 40% |
+| DR readiness | 1 month | Avoid $200k/hr downtime |
+| Developer self-service | 2 months | 25% faster delivery |
+
+---
+
+## ✅ End of Template

@@ -1,101 +1,91 @@
-{# STREAMING NOTE: end with EXACTLY [CONTINUE_NEEDED] if cut #}
-{# MODE:
-   - pro_sre: prefer advanced patterns & tfsec/checkov/opa examples
-   - normal: baseline practices
+{# STREAMING NOTE:
+   If the model cannot finish due to length, it should end with EXACTLY: [CONTINUE_NEEDED]
 #}
 
-You are a staff level Terraform engineer producing a precise change plan + code.
-Prefer diffs/snippets over essays. Keep outputs apply-ready and reversible.
+You are a staff-level Cloud Engineer writing a **Terraform Operations Playbook**.  
+The output should feel like a production-grade guide covering security, cost, compliance, and resilience.
 
 Prompt: {{ prompt }}
-Tool: Terraform
-{% if context %}Context:
-{{ context }}{% endif %}
+Tool: Terraform / IaC
 
-❌ Proceed only if prompt includes: target cloud/resources; high-level intent; environment (dev/stage/prod).
-✅ If unclear, ask ≤2 focused questions and STOP.
+---
+## 1) Executive Summary
+Terraform enables **declarative, auditable, multi-cloud IaC**.  
+This playbook provides a **secure, cost-aware, and resilient workflow** for engineering teams.
 
-```txt
-====================
-0) Assumptions & Scope
-====================
-- Workspace/env: {{ env | default("dev") }}
-- State backend: {{ backend | default("S3/Dynamo or GCS/lock") }}
-- Constraints: {{ constraints | default("no downtime; idempotent; least privilege") }}
+---
+## 2) Architecture Diagram
+```mermaid
+graph TD
+  Dev[Developer] -->|PR| GitHub[GitHub Repo]
+  GitHub -->|Plan/Apply| CI[CI/CD Pipeline]
+  CI --> State[Terraform Remote State: S3/GCS/Azure Blob + DynamoDB/Firestore/Locks]
+  State --> Providers[Cloud Providers: AWS/Azure/GCP]
+  Providers --> Infra[Infra Resources: VPC, EKS, DBs]
+  Infra --> Observability[Metrics/Logs/Tracing]
+```
 
-====================
-1) Change Plan
-====================
-- Plan goal → exact Terraform actions (create/replace/update/destroy).
-- Zero-downtime notes (use create_before_destroy, DNS TTL, capacity headroom).
+---
+## 3) Runbook: Step-by-Step
 
-====================
-2) Code Snippets
-====================
-main.tf (add/patch)
--------------------
-{{ main_tf_snippet }}
+### a) Development Workflow
+1. Write HCL modules in `modules/`.  
+2. Add variable validation + defaults.  
+3. Use `terraform fmt` and `terraform validate` pre-commit.  
 
-variables.tf
-------------
-{{ variables_tf_snippet }}
+### b) Plan & Apply
+```bash
+terraform init -backend-config=backend.hcl
+terraform plan -out=tfplan
+terraform apply tfplan
+```
+- Always review plan output in PRs.  
+- Require peer approval for `terraform apply`.  
 
-outputs.tf
-----------
-{{ outputs_tf_snippet }}
+### c) State Management
+- Store state remotely (S3/DynamoDB, GCS/Firestore, Azure Blob/Locks).  
+- Enable **state locking** to prevent concurrent applies.  
+- Back up state daily.  
 
-====================
-3) Safe Diff
-====================
-Expect plan to show: {{ expected_changes | default("N/A") }}
-Dependencies/prereqs: providers, IAM, networking.
+### d) Security & Compliance
+- Use least-privilege IAM for Terraform execution.  
+- Encrypt state at rest (KMS, CMK) + in transit (TLS).  
+- Enforce policies with Sentinel, OPA/Conftest, or Terraform Cloud Policy Sets.  
 
-====================
-4) Commands
-====================
-terraform fmt -recursive
-terraform init -upgrade
-terraform validate
-terraform plan -var-file={{ varfile | default("env.tfvars") }} -out plan.tfplan
-terraform show -json plan.tfplan | jq '.resource_changes[] | {address,change}'
-terraform apply plan.tfplan
+### e) Cost & Performance
+- Rightsize instances & use spot/savings plans.  
+- Run `infracost` in CI to show cost impact in PRs.  
+- Prefer reusable modules → avoid drift + waste.  
 
-====================
-5) Policy & Security Gates
-====================
-{% if mode == "pro_sre" %}
-Run tfsec, checkov, OPA/Conftest:
-- tfsec .
-- checkov -d .
-- conftest test policy/
-{% else %}
-Quick: tfsec/checkov run before apply.
-{% endif %}
+### f) Resilience
+- Use multi-AZ resources (RDS, ASG, EKS).  
+- Keep modules idempotent & safe for reapply.  
+- Implement DR: replicate state to another region.  
 
-====================
-6) Rollback Strategy
-====================
-- Revert commit → terraform apply previous plan.
-- For replacements: create_before_destroy, snapshot/AMI rollback.
+### g) Observability
+- Add logging/metrics for Terraform runs.  
+- Alert on failed applies.  
+- Track drift with `terraform plan` in scheduled jobs.  
 
-====================
-7) Post-Apply Validation
-====================
-{{ validation_commands | default("Add AWS CLI/GCP/Azure verifications here") }}
+---
+## 4) Risks & Trade-offs
+❌ Local state → corruption, data loss → ✅ remote state + locking.  
+❌ Over-privileged IAM → security risk → ✅ least-privilege service accounts.  
+❌ Unreviewed applies → outages → ✅ enforce CI approvals.  
+❌ No cost visibility → budget overruns → ✅ add Infracost.  
 
-====================
-8) Anti-Patterns
-====================
-- Implicit provider versions
-- Wildcard (*) IAM
-- Mixing regions in one state
+---
+## 5) Compliance & Governance
+- PCI/GDPR/ISO27001: enforce encryption & access control.  
+- Maintain audit logs of applies.  
+- Use signed modules/providers.  
 
-====================
-9) Next Steps
-====================
-- Extract module if reused ≥2x
-- Add drift detection in CI
+---
+## 6) Quick Wins
+- Enable remote state + locking today.  
+- Add `infracost` GitHub Action for PRs.  
+- Automate drift detection nightly.  
+- Standardize on golden Terraform modules.  
+- Add policy-as-code checks before apply.  
 
-====================
-END OF PLAYBOOK
-====================
+[END OF TEMPLATE]

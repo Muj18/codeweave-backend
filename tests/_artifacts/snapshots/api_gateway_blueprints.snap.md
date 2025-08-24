@@ -1,0 +1,101 @@
+# templates/api_gateway_blueprints.jinja2
+
+You are a **staff-level Cloud Architect** tasked with producing a production-grade **API Gateway Blueprint Playbook**.  
+The output must:  
+- Be written as if reviewed by senior architects and CTOs.  
+- Cover **multi-cloud API gateway design** (AWS API Gateway, Azure API Management, GCP API Gateway).  
+- Include **automation (IaC, Terraform, GitHub Actions, ArgoCD)**, **resilience (HA, DR, RPO, multi-AZ)**,  
+  **observability (logs, metrics, tracing, SLOs)**, **security & compliance (IAM, least privilege, OAuth2/JWT,  
+  PCI, ISO 27001, HIPAA, GDPR)**, **cost efficiency (caching, throttling, savings plans)**, **risks**, **runbook**,  
+  and **quick wins**.  
+- Provide **complete Terraform/YAML snippets** (no pseudocode).  
+- Use structured markdown with clear sections.  
+
+---
+
+## 1) Executive Summary
+- **Prompt:** sample-prompt  
+- **Tool:** API Gateway Blueprint Playbook  
+- **Cloud/Runtime:** sample-cloud  
+- **Prior Context:** sample-conversation  
+
+This playbook delivers **enterprise patterns for API gateway deployments** across AWS, Azure, and GCP.  
+It ensures **secure, resilient, compliant, observable, and cost-optimized API access** for production workloads.  
+
+---
+
+## 2) Architecture Diagram
+```mermaid
+graph TD
+    Client[Client Apps] --> Gateway[API Gateway Layer]
+    Gateway --> Auth[OAuth2/JWT Validation]
+    Gateway --> Backend[Microservices]
+    Backend --> Obs[Metrics/Logs/Tracing/SLOs]
+    Gateway --> Sec[Security (IAM/KMS/Least Privilege)]
+    Gateway --> DR[HA / DR / Multi-AZ]
+```
+
+---
+
+## 3) Core Architecture
+- **Automation**: Terraform modules + GitHub Actions CI + ArgoCD GitOps.  
+- **Resilience**: Multi-AZ gateways, failover routing, caching layers.  
+- **Security**: OAuth2/JWT, IAM least privilege, WAF + KMS secrets.  
+- **Compliance**: PCI, ISO 27001, HIPAA, GDPR.  
+- **Observability**: Access logs, latency/error metrics, distributed tracing.  
+- **Cost**: caching tiers, throttling, usage plans, savings plans.  
+
+---
+
+## 4) Production-Grade Examples
+
+### AWS API Gateway Terraform
+```hcl
+resource "aws_api_gateway_rest_api" "example" {
+  name        = "prod-api"
+  description = "Production API Gateway"
+}
+```
+
+### Azure API Management
+```hcl
+resource "azurerm_api_management" "example" {
+  name                = "prod-apim"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  publisher_name      = "Acme Corp"
+  publisher_email     = "platform@example.com"
+  sku_name            = "Developer_1"
+}
+```
+
+---
+
+## 5) Runbook – Step-by-Step
+1. Deploy API Gateway via Terraform.  
+2. Configure OAuth2/JWT validation.  
+3. Enable caching + request throttling.  
+4. Validate logs/metrics/traces in dashboards.  
+5. Run compliance scans (PCI/ISO).  
+
+---
+
+## 6) Risks & Mitigations
+| Risk | Mitigation |
+|------|------------|
+| Latency overhead | Add caching + edge locations |
+| Cost sprawl | Throttling + usage plans |
+| Misconfigured auth | Enforce IAM + OAuth2 |
+| Region outage | Multi-region failover |
+
+---
+
+## 7) Quick Wins
+- Enable caching for instant cost savings.  
+- Add WAF rules for OWASP Top 10.  
+- Enable tracing headers immediately.  
+- KPI: latency p95 < 200ms, error rate < 1%.  
+
+---
+
+## ✅ End of Template

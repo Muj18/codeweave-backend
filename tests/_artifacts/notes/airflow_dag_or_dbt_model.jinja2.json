@@ -1,0 +1,19 @@
+{
+  "error": "'dict' object is not callable",
+  "needed_vars": [
+    "cloud",
+    "config",
+    "conversation",
+    "prompt",
+    "ref",
+    "tool"
+  ],
+  "context_keys": [
+    "cloud",
+    "config",
+    "conversation",
+    "prompt",
+    "ref",
+    "tool"
+  ]
+}

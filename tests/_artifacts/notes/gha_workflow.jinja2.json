@@ -1,0 +1,21 @@
+{
+  "error": "'str' object is not callable",
+  "needed_vars": [
+    "aws_region",
+    "cache_path",
+    "hashFiles",
+    "lang",
+    "prompt",
+    "runner",
+    "setup_with"
+  ],
+  "context_keys": [
+    "aws_region",
+    "cache_path",
+    "hashFiles",
+    "lang",
+    "prompt",
+    "runner",
+    "setup_with"
+  ]
+}

@@ -1,0 +1,105 @@
+# templates/argocd_appset_helper.jinja2
+
+You are a **staff-level DevOps Engineer** tasked with producing a production-grade **ArgoCD ApplicationSet Helper Playbook**.  
+The output must:  
+- Be written as if reviewed by senior architects and CTOs.  
+- Cover **multi-cluster GitOps with ArgoCD ApplicationSets**.  
+- Include **automation (IaC, Terraform, GitHub Actions, ArgoCD)**, **resilience (HA, DR, RPO)**, **observability (logs, metrics, tracing, SLOs)**, **security & compliance (IAM, least privilege, encryption, PCI, ISO 27001, HIPAA, GDPR)**, **cost efficiency (rightsizing, spot, savings plans)**, **risks**, **runbook**, and **quick wins**.  
+- Provide **complete YAML/Terraform snippets** (no pseudocode).  
+- Use structured markdown with clear sections.  
+
+---
+
+## 1) Executive Summary
+- **Prompt:** sample-prompt  
+- **Tool:** ArgoCD ApplicationSet Helper Playbook  
+- **Cloud/Runtime:** sample-cloud  
+- **Prior Conversation Context:** sample-conversation  
+
+This playbook defines **scalable patterns for ArgoCD ApplicationSets**, enabling **multi-cluster GitOps automation** with resilience, observability, and compliance.  
+
+---
+
+## 2) Architecture Diagram
+```mermaid
+graph TD
+    Repo[Git Repo] --> Argo[ArgoCD Controller]
+    Argo --> AppSet[ApplicationSet Generator]
+    AppSet --> Clusters[Multi-Cluster Deployments]
+    Clusters --> Obs[Metrics/Logs/Tracing/SLOs]
+    AppSet --> Sec[Security (RBAC/IAM/KMS)]
+    AppSet --> DR[HA / DR / Multi-AZ]
+```
+
+---
+
+## 3) Core Architecture
+- **Automation**: ArgoCD with GitHub Actions for CI, Terraform for infra.  
+- **Resilience**: HA ArgoCD, multi-cluster DR failover.  
+- **Security**: RBAC, IAM roles, KMS encryption for secrets.  
+- **Compliance**: PCI, HIPAA, ISO 27001, GDPR.  
+- **Observability**: Logs, Metrics, Tracing, SLOs, ArgoCD sync dashboards.  
+- **Cost**: rightsizing controller, spot for dev/test clusters.  
+
+---
+
+## 4) Production-Grade Examples
+
+### ArgoCD ApplicationSet (Cluster Generator)
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: prod-appset
+spec:
+  generators:
+  - clusters: {}
+  template:
+    metadata:
+      name: '{{name}}-app'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/acme/platform-configs
+        targetRevision: main
+        path: apps/{{name}}
+      destination:
+        server: '{{server}}'
+        namespace: default
+```
+
+---
+
+## 5) Runbook – Step-by-Step
+1. Deploy ArgoCD with HA setup.  
+2. Create ApplicationSet YAML as above.  
+3. Configure cluster secrets in ArgoCD.  
+4. Validate sync across clusters.  
+5. Monitor metrics, logs, tracing, and SLOs.  
+
+---
+
+## 6) Risks, Pitfalls & Gotchas
+| Risk | Mitigation |
+|------|------------|
+| Drift between clusters | ArgoCD auto-sync enabled |
+| Secrets exposure | Use KMS + sealed-secrets |
+| Controller downtime | HA ArgoCD with replicas |
+| Cost overruns | Rightsize + use spot for dev |
+
+**Gotchas:**  
+- Misconfigured cluster secrets block sync.  
+- Cluster generator requires RBAC tuned per environment.  
+
+---
+
+## 7) Quick Wins
+- Add drift detection alerts.  
+- Enable progressive sync waves.  
+- Automate KPI: **sync success rate, drift MTTR**.  
+- Quick win: add compliance policy checks inline with ArgoCD.  
+- Gotcha: avoid hardcoding cluster credentials in manifests.  
+
+---
+
+## ✅ End of Template

@@ -1,0 +1,94 @@
+# templates/snippets/db_connection_fail.jinja2
+
+## Database Connection Failure — Production-Grade Snippet
+
+**Key Symptoms**
+- `ECONNREFUSED` when connecting to database  
+- Authentication/permission errors (`Access denied`, `invalid credentials`)  
+- Connection pool exhausted or max connections reached  
+- Intermittent timeouts for queries or ORM connections  
+- Failures in CI/CD jobs or ETL pipelines relying on DB  
+
+---
+
+**Immediate Triage**
+- Verify credentials: username, password, database name, host, port  
+- Test connectivity from app host:
+  ```bash
+  nc -zv <db-host> <db-port>
+  psql -h <db-host> -U <user> -d <dbname>  # Postgres example
+  mysql -h <db-host> -u <user> -p <dbname>  # MySQL example
+  ```
+- Check DB logs for failed connections or auth errors  
+- Validate network (VPC, security groups, NSG, firewall rules)  
+- Inspect connection pool usage in application logs  
+
+---
+
+**Safe Fix — Secrets + Deployment**
+```yaml
+# Kubernetes Secret for DB credentials
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-creds
+stringData:
+  username: admin
+  password: securepass
+---
+# Deployment consuming the secret
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app
+spec:
+  template:
+    spec:
+      containers:
+      - name: app
+        image: my-app:latest
+        env:
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: db-creds
+              key: username
+        - name: DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: db-creds
+              key: password
+        - name: DB_HOST
+          value: my-database.example.com
+        - name: DB_PORT
+          value: "5432"
+```
+
+---
+
+**Observability Checks**
+- Review DB connection metrics (pool usage, failed connections).  
+- Enable application-side tracing for DB calls.  
+- Correlate DB errors with upstream service failures.  
+
+---
+
+**Risks & Mitigations**
+| Risk | Mitigation |
+|------|------------|
+| Secrets in code | Always use K8s Secrets or Vault |
+| Connection storms | Apply retry/backoff policies |
+| Pool exhaustion | Increase pool or tune ORM configs |
+| Network changes | Document SG/NSG/firewall updates |
+
+---
+
+**Quick Wins**
+- Rotate DB creds via secrets manager.  
+- Enable liveness probes to restart stuck pods.  
+- Add DB dashboards to Grafana.  
+- KPI: failed connections < 1% over 24h.  
+
+---
+
+## ✅ End of Snippet

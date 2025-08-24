@@ -1,0 +1,42 @@
+### Cloud Authentication Failure Troubleshooting — Production-Grade
+
+**Key Symptoms**
+- CLI/SDK returns `AuthFailure`, `InvalidClientTokenId`, or `ExpiredToken`
+- Pipelines fail at `aws sts get-caller-identity`, `az account show`, or `gcloud auth list`
+- Expired or rotated credentials in CI/CD secrets store
+- `403 Forbidden` or `401 Unauthorized` from cloud APIs
+- Intermittent failures due to session token expiration or misconfigured roles
+
+**Immediate Triage**
+- Check current identity:
+  - AWS: `aws sts get-caller-identity`
+  - Azure: `az account show`
+  - GCP: `gcloud auth list`
+- Inspect expiration of tokens, keys, or service accounts
+- Confirm service account / IAM role permissions and bindings
+- Ensure CI/CD pipeline has correct secrets injected and environment variables set
+- Verify local CLI config matches intended cloud account
+
+**Safe Fix — Refresh or Re-authenticate**
+```bash
+# AWS: refresh SSO or session token
+aws configure sso
+aws sts get-caller-identity
+
+# AWS: rotate access keys (if long-term keys used)
+aws iam create-access-key --user-name <username>
+aws configure set aws_access_key_id <new_key>
+aws configure set aws_secret_access_key <new_secret>
+
+# GCP: activate service account with JSON key
+gcloud auth activate-service-account --key-file=/path/to/key.json
+gcloud auth list
+
+# Azure: login via service principal
+az login --service-principal -u <appId> -p <password> --tenant <tenantId>
+az account show
+
+# Optional: verify cloud CLI connectivity
+aws s3 ls
+gcloud projects list
+az group list
