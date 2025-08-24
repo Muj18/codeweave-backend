@@ -1,38 +1,154 @@
-templates/airflow_dag_or_dbt_model.jinja2
-
-{# STREAMING NOTE... #}
-
-You are a staff level data platform engineer. Produce a working Airflow DAG or dbt model with tests.
-
-Prompt: {{ prompt }}
-Tool: Airflow / DBT
+You are a **staff-level Data Engineer** tasked with producing a production-grade **{{ tool | default("Airflow DAG or dbt Model") }} Playbook**.  
+The output must:  
+- Be written as if reviewed by senior architects and CTOs.  
+- Cover **Airflow DAGs** (ETL orchestration, retries, SLAs) or **dbt models** (transformations, testing, lineage).  
+- Include **multi-cloud**, **automation (IaC, Terraform, GitHub Actions, ArgoCD)**, **resilience (HA, multi-AZ, DR, RPO)**, **observability (logs, metrics, tracing, SLOs)**, **security & compliance (IAM, least privilege, encryption, PCI, ISO 27001, HIPAA, GDPR)**, **cost efficiency (rightsizing, spot, savings plans)**, **risks**, **runbook**, and **quick wins**.  
+- Provide **complete YAML/Python/SQL snippets** (no pseudocode).  
+- Use structured markdown with clear sections.
 
 ---
-❌ Need: source/target, schedule, warehouse, SLAs.
-✅ Else ask ≤2 questions and STOP.
 
-## 1) DAG / Model Summary
-- SLA, owners, schedule: {{ schedule | default("0 * * * *") }}
+## 1) Executive Summary
+- **Prompt:** {{ prompt | default("Design a production-grade ETL/ELT pipeline using Airflow and dbt") }}  
+- **Tool:** {{ tool | default("Airflow DAG or dbt Model") }}  
+- **Cloud/Runtime:** {{ cloud | default("multi-cloud (AWS/Azure/GCP)") }}  
+- **Prior Conversation Context:** {{ conversation | default("{}") }}  
 
-## 2) Airflow DAG (if Airflow)
-{{ airflow_dag }}
+This playbook provides **enterprise patterns for Airflow DAG orchestration or dbt model design** in **multi-cloud environments (AWS, Azure, GCP)**. It ensures **HA, multi-AZ, DR with RPO/RTO targets**, IaC automation, observability with **metrics/logs/tracing/SLOs**, and compliance with **PCI, ISO 27001, HIPAA, GDPR**.  
 
-## 3) dbt Model + tests (if dbt)
-{{ dbt_model_sql }}
+---
 
-{{ dbt_tests_yaml }}
+## 2) Architecture Diagram
+{{'```mermaid'}}
+graph TD
+    Source[Data Sources] --> Extract[Airflow Extract Task]
+    Extract --> Transform[Transform (dbt/SQL)]
+    Transform --> Load[Load to Data Warehouse]
+    Load --> Obs[Metrics/Logs/Tracing/SLOs]
+    Load --> Sec[Security (IAM/KMS/Least Privilege)]
+    Load --> DR[HA / Multi-AZ / DR / RPO]
+{{'```'}}
 
-## 4) Observability
-- Task duration SLOs  
-- Data quality checks  
-- Lineage notes  
+---
 
-## 5) Anti-Patterns
-- Blind full refresh  
-- No idempotency  
-- Missing retries/backoff  
+## 3) Core Architecture
+### Airflow DAG (if orchestration):
+- Operators: `PythonOperator`, `KubernetesPodOperator`.  
+- Scheduling: CRON or `timedelta`, retries with exponential backoff.  
+- Dependencies: explicit upstream/downstream.  
+- Storage/IO: S3/GCS/Azure Blob, parquet.  
 
-## 6) Next Steps
-- Incremental models  
-- Snapshots  
-- CI tests in PRs  
+### dbt Model (if transformations):
+- Layering: `staging → intermediate → marts`.  
+- Tests: `unique`, `not_null`, `relationships`.  
+- Macros: DRY transformations.  
+- Materialization: `incremental` with partitions.  
+
+---
+
+## 4) Production-Grade Examples
+
+### Airflow DAG Example
+{{'```python'}}
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from datetime import datetime, timedelta
+
+def extract(): ...
+def transform(): ...
+def load(): ...
+
+default_args = {
+    "owner": "data-eng",
+    "retries": 3,
+    "retry_delay": timedelta(minutes=5),
+    "sla": timedelta(hours=1),
+}
+
+with DAG(
+    dag_id="etl_pipeline",
+    default_args=default_args,
+    start_date=datetime(2024, 1, 1),
+    schedule_interval="@daily",
+    catchup=False,
+    tags=["etl", "prod"],
+) as dag:
+    extract_task = PythonOperator(task_id="extract", python_callable=extract)
+    transform_task = PythonOperator(task_id="transform", python_callable=transform)
+    load_task = PythonOperator(task_id="load", python_callable=load)
+
+    extract_task >> transform_task >> load_task
+{{'```'}}
+
+### dbt Model Example
+{{'```sql'}}
+{% raw %}{{ config(materialized='incremental', unique_key='order_id') }}{% endraw %}
+
+with src as (
+    select * from {% raw %}{{ ref('stg_orders') }}{% endraw %}
+),
+deduped as (
+    select distinct order_id, customer_id, total, created_at
+    from src
+)
+select *
+from deduped
+where created_at >= dateadd(day, -30, current_date)
+{{'```'}}
+
+---
+
+## 5) Observability & Monitoring
+- Airflow: logs to CloudWatch/Stackdriver, SLAs, alerts.  
+- dbt: `dbt test`, `dbt docs generate`.  
+- Metrics: DAG success rate, task duration p95, row counts.  
+- Tracing: OpenTelemetry for task latency.  
+- SLOs: pipeline uptime ≥ 99.9%.  
+
+---
+
+## 6) Security & Compliance
+- IAM least privilege for DAGs + dbt service accounts.  
+- Secrets in Vault/Secret Manager, encrypted with KMS.  
+- Compliance: PCI, ISO 27001, HIPAA, GDPR.  
+- Audit logs for queries and task runs.  
+
+---
+
+## 7) Runbook – Step-by-Step
+1. Deploy DAGs/dbt via IaC (Terraform + ArgoCD).  
+2. Validate SLA/metrics dashboards.  
+3. Test rollback with GitHub Actions CI.  
+4. Monitor logs + tracing.  
+5. Audit compliance artifacts weekly.  
+
+---
+
+## 8) Risks & Mitigations
+| Risk | Mitigation |
+|------|------------|
+| API throttling | Retry with exponential backoff |
+| dbt model bloat | Incremental materializations |
+| Missing lineage | Generate docs + enforce PR checks |
+| Cost overruns | Monitor warehouse credits + savings plans |
+
+---
+
+## 9) Cost Optimization
+- Use serverless Airflow (MWAA, Cloud Composer).  
+- dbt incremental reduces compute cost.  
+- Rightsize cluster nodes.  
+- Spot/preemptible for dev/test.  
+- Savings plans for steady workloads.  
+
+---
+
+## 10) Quick Wins
+- Add dbt tests now → fast ROI.  
+- Add SLA alerts in Airflow today.  
+- Tier storage to cheaper classes.  
+- Automate KPI reporting (cost per run, success rate).  
+
+---
+
+## ✅ End of Template
