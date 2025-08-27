@@ -1,0 +1,189 @@
+{# templates/java_code_generation.jinja2 #}
+
+{% set is_spring = "spring" in prompt.lower() or "boot" in prompt.lower() or "api" in prompt.lower() %}
+
+{% if is_spring %}
+```java
+// --- Main Application ---
+@SpringBootApplication
+@EnableJpaRepositories
+@EnableScheduling
+public class {{ prompt|replace(" ", "")|title }}Application {
+    public static void main(String[] args) {
+        ProjectBootstrapper.autoSetup();
+        SpringApplication.run({{ prompt|replace(" ", "")|title }}Application.class, args);
+        Logger.success("Spring Boot application ready for production");
+    }
+}
+```
+
+```java
+// --- Repository & Entity ---
+@Entity
+@Table(name = "data")
+public class DataEntity {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String name;
+    private LocalDateTime createdAt = LocalDateTime.now();
+    
+    // getters/setters
+}
+
+@Repository
+public interface {{ prompt|replace(" ", "")|title }}Repository extends JpaRepository<DataEntity, Long> {}
+```
+
+```java
+// --- Service Layer ---
+@Service
+@Transactional
+public class {{ prompt|replace(" ", "")|title }}Service {
+    private final {{ prompt|replace(" ", "")|title }}Repository repository;
+
+    public {{ prompt|replace(" ", "")|title }}Service({{ prompt|replace(" ", "")|title }}Repository repository) {
+        this.repository = repository;
+    }
+
+    @Retryable(value = {DataAccessException.class}, maxAttempts = 3, backoff = @Backoff(delay = 1000))
+    public List<DataDto> getAllData() {
+        return BenchmarkUtil.benchmark("database-query", () -> 
+            RetryUtil.executeWithRetry(() -> 
+                repository.findAll().stream()
+                    .map(this::toDto)
+                    .toList()
+            , 3)
+        );
+    }
+
+    private DataDto toDto(DataEntity entity) {
+        return new DataDto(entity.getId(), entity.getName(), entity.getCreatedAt());
+    }
+
+    public record DataDto(Long id, String name, LocalDateTime createdAt) {}
+}
+```
+
+```java
+// --- Controller ---
+@RestController
+@RequestMapping("/api/v1")
+public class {{ prompt|replace(" ", "")|title }}Controller {
+    private final {{ prompt|replace(" ", "")|title }}Service service;
+
+    public {{ prompt|replace(" ", "")|title }}Controller({{ prompt|replace(" ", "")|title }}Service service) {
+        this.service = service;
+    }
+
+    @GetMapping("/health")
+    public ResponseEntity<Map<String,Object>> health() {
+        return ResponseEntity.ok(Map.of(
+            "status", "UP",
+            "timestamp", Instant.now(),
+            "uptime", ManagementFactory.getRuntimeMXBean().getUptime(),
+            "javaVersion", System.getProperty("java.version")
+        ));
+    }
+
+    @GetMapping("/data")
+    public ResponseEntity<List<{{ prompt|replace(" ", "")|title }}Service.DataDto>> data() {
+        try {
+            return ResponseEntity.ok(service.getAllData());
+        } catch (Exception e) {
+            SmartErrorHandler.handle(e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+}
+```
+
+```java
+// --- Utility: RetryUtil ---
+public class RetryUtil {
+    public static <T> T executeWithRetry(Supplier<T> task, int maxAttempts) {
+        Exception last = null;
+        long delay = 500;
+        for (int i = 1; i <= maxAttempts; i++) {
+            try {
+                return task.get();
+            } catch (Exception e) {
+                last = e;
+                Logger.warn("Attempt " + i + " failed: " + e.getMessage());
+                try { Thread.sleep(delay); } catch (InterruptedException ignored) {}
+                delay *= 2;
+            }
+        }
+        throw new RuntimeException("Retries exhausted", last);
+    }
+}
+```
+
+```java
+// --- Utility: BenchmarkUtil ---
+public class BenchmarkUtil {
+    public static <T> T benchmark(String name, Supplier<T> task) {
+        long start = System.nanoTime();
+        try {
+            T result = task.get();
+            Logger.success(name + " completed in " + ((System.nanoTime()-start)/1_000_000) + " ms");
+            return result;
+        } catch (Exception e) {
+            Logger.error(name + " failed: " + e.getMessage());
+            throw e;
+        }
+    }
+}
+```
+
+```java
+// --- Utility: SmartErrorHandler ---
+public class SmartErrorHandler {
+    public static void handle(Exception e) {
+        Logger.error("Error: " + e.getMessage());
+        if (e instanceof SQLException) {
+            Logger.info("💡 Check DB URL/credentials and ensure DB is up");
+        } else if (e instanceof ConnectException) {
+            Logger.info("💡 Network issue: verify service endpoints");
+        } else {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+```java
+// --- Utility: Logger ---
+public class Logger {
+    public static void success(String msg) { System.out.println("✅ " + msg); }
+    public static void info(String msg) { System.out.println("ℹ️  " + msg); }
+    public static void warn(String msg) { System.out.println("⚠️ " + msg); }
+    public static void error(String msg) { System.err.println("❌ " + msg); }
+}
+```
+
+```java
+// --- Project Detector (non-Spring contexts) ---
+public class ProjectDetector {
+    public void analyze() {
+        if (Files.exists(Paths.get("pom.xml"))) Logger.info("Maven project detected");
+        else if (Files.exists(Paths.get("build.gradle"))) Logger.info("Gradle project detected");
+        else Logger.warn("No build tool found");
+    }
+}
+```
+
+```java
+// --- Database Config ---
+@Configuration
+public class DatabaseConfig {
+    @Bean
+    public DataSource dataSource() {
+        HikariConfig cfg = new HikariConfig();
+        cfg.setJdbcUrl("jdbc:h2:mem:testdb");
+        cfg.setUsername("sa");
+        cfg.setPassword("");
+        return new HikariDataSource(cfg);
+    }
+}
+```
+{% endif %}

@@ -1,0 +1,90 @@
+{# gitlab_ci_playbook.jinja2 #}
+You are a **Senior GitLab CI/CD Engineer** creating production-ready pipelines.
+
+**Request:** {{ user_prompt }}
+{% if complexity == 'enterprise' %}
+**Focus:** Multi-stage, compliance-ready CI/CD with approvals, security scans, and governance.
+{% else %}
+**Focus:** Clean, maintainable .gitlab-ci.yml following DevOps best practices.
+{% endif %}
+
+---
+
+# -----------------------------------
+# .gitlab-ci.yml
+# Project: {{ project_name }}
+# Environment: {{ environment }}
+# Generated: {{ current_date }}
+# -----------------------------------
+
+stages:
+  - build
+  - test
+  {% if compliance_requirements != 'none' %}
+  - security
+  {% endif %}
+  - deploy
+
+variables:
+  PROJECT_NAME: "{{ project_name }}"
+  ENVIRONMENT: "{{ environment }}"
+  COST_TIER: "{{ cost_tier }}"
+
+default:
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - apk add --no-cache bash curl jq
+
+build_job:
+  stage: build
+  script:
+    - echo "Building $PROJECT_NAME"
+    - docker build -t registry.gitlab.com/$CI_PROJECT_PATH:$CI_COMMIT_SHA .
+  only:
+    - merge_requests
+    - main
+
+test_job:
+  stage: test
+  script:
+    - echo "Running tests"
+    - pytest --maxfail=1 --disable-warnings -q
+  artifacts:
+    when: always
+    reports:
+      junit: test-results.xml
+  only:
+    - merge_requests
+    - main
+
+{% if compliance_requirements != 'none' %}
+security_scan:
+  stage: security
+  script:
+    - echo "Running security scans"
+    - trivy fs . || true
+  allow_failure: false
+  only:
+    - main
+{% endif %}
+
+deploy_job:
+  stage: deploy
+  environment:
+    name: $ENVIRONMENT
+    url: https://$CI_PROJECT_PATH.$ENVIRONMENT.example.com
+  script:
+    - echo "Deploying to $ENVIRONMENT"
+    - ./scripts/deploy.sh $ENVIRONMENT
+  only:
+    - main
+  when: manual
+
+# -----------------------------------
+# Validation & Testing
+gitlab-runner exec docker build_job
+gitlab-runner exec docker test_job
+gitlab-runner exec docker security_scan
+gitlab-runner exec docker deploy_job

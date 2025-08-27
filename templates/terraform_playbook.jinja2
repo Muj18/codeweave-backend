@@ -1,8 +1,8 @@
 {# STREAMING NOTE:
-   If the model cannot finish due to length, it should end with EXACTLY: [CONTINUE_NEEDED]
+  If the model cannot finish due to length, it should end with EXACTLY: [CONTINUE_NEEDED]
 #}
 
-You are a staff-level Cloud Engineer writing a **Terraform Operations Playbook**.  
+You are a staff-level Terraform Engineer writing a **Terraform Operations Playbook**.  
 The output should feel like a production-grade guide covering security, cost, compliance, and resilience.
 
 Prompt: {{ prompt }}
@@ -11,81 +11,246 @@ Tool: Terraform / IaC
 ---
 ## 1) Executive Summary
 Terraform enables **declarative, auditable, multi-cloud IaC**.  
-This playbook provides a **secure, cost-aware, and resilient workflow** for engineering teams.
+This playbook provides a **secure, cost-aware, and resilient workflow** for engineering teams with enterprise-grade patterns for workspace management, state recovery, and team scaling.
 
 ---
 ## 2) Architecture Diagram
-```mermaid
+~~~mermaid
 graph TD
-  Dev[Developer] -->|PR| GitHub[GitHub Repo]
-  GitHub -->|Plan/Apply| CI[CI/CD Pipeline]
-  CI --> State[Terraform Remote State: S3/GCS/Azure Blob + DynamoDB/Firestore/Locks]
-  State --> Providers[Cloud Providers: AWS/Azure/GCP]
-  Providers --> Infra[Infra Resources: VPC, EKS, DBs]
-  Infra --> Observability[Metrics/Logs/Tracing]
-```
+ Dev[Developer] -->|PR| GitHub[GitHub Repo]
+ GitHub -->|Plan/Apply| CI[CI/CD Pipeline]
+ CI --> State[Remote State: S3+DynamoDB/GCS+Firestore/Azure+Locks]
+ State --> Workspaces[Multi-Environment Workspaces]
+ Workspaces --> Providers[Cloud Providers: AWS/Azure/GCP]
+ Providers --> Infra[Infrastructure Resources]
+ Infra --> Observability[Monitoring/Compliance/Cost Tracking]
+~~~
 
 ---
-## 3) Runbook: Step-by-Step
+## 3) Advanced Workspace Strategies
+**Environment Isolation Patterns**
+~~~bash
+# Workspace-based isolation
+terraform workspace new dev
+terraform workspace new staging  
+terraform workspace new prod
+~~~
 
-### a) Development Workflow
-1. Write HCL modules in `modules/`.  
-2. Add variable validation + defaults.  
-3. Use `terraform fmt` and `terraform validate` pre-commit.  
+~~~plaintext
+# Directory-based isolation (preferred for complex environments)
+environments/
+├── dev/
+│   ├── backend.tf
+│   ├── terraform.tfvars
+│   └── main.tf
+├── staging/
+└── prod/
+~~~
 
-### b) Plan & Apply
-```bash
-terraform init -backend-config=backend.hcl
-terraform plan -out=tfplan
-terraform apply tfplan
-```
-- Always review plan output in PRs.  
-- Require peer approval for `terraform apply`.  
+**Cross-Account/Subscription Deployment**
+~~~hcl
+# AWS Cross-Account Provider Configuration
+provider "aws" {
+  alias  = "prod_account"
+  region = var.aws_region
+  assume_role {
+    role_arn     = "arn:aws:iam::${var.prod_account_id}:role/TerraformExecutionRole"
+    session_name = "terraform-deployment"
+    external_id  = var.external_id
+  }
+}
 
-### c) State Management
-- Store state remotely (S3/DynamoDB, GCS/Firestore, Azure Blob/Locks).  
-- Enable **state locking** to prevent concurrent applies.  
-- Back up state daily.  
-
-### d) Security & Compliance
-- Use least-privilege IAM for Terraform execution.  
-- Encrypt state at rest (KMS, CMK) + in transit (TLS).  
-- Enforce policies with Sentinel, OPA/Conftest, or Terraform Cloud Policy Sets.  
-
-### e) Cost & Performance
-- Rightsize instances & use spot/savings plans.  
-- Run `infracost` in CI to show cost impact in PRs.  
-- Prefer reusable modules → avoid drift + waste.  
-
-### f) Resilience
-- Use multi-AZ resources (RDS, ASG, EKS).  
-- Keep modules idempotent & safe for reapply.  
-- Implement DR: replicate state to another region.  
-
-### g) Observability
-- Add logging/metrics for Terraform runs.  
-- Alert on failed applies.  
-- Track drift with `terraform plan` in scheduled jobs.  
-
----
-## 4) Risks & Trade-offs
-❌ Local state → corruption, data loss → ✅ remote state + locking.  
-❌ Over-privileged IAM → security risk → ✅ least-privilege service accounts.  
-❌ Unreviewed applies → outages → ✅ enforce CI approvals.  
-❌ No cost visibility → budget overruns → ✅ add Infracost.  
+# Azure Cross-Subscription
+provider "azurerm" {
+  alias           = "prod_subscription"
+  subscription_id = var.prod_subscription_id
+  features {}
+}
+~~~
 
 ---
-## 5) Compliance & Governance
-- PCI/GDPR/ISO27001: enforce encryption & access control.  
-- Maintain audit logs of applies.  
-- Use signed modules/providers.  
+## 4) Enterprise State Management
+~~~hcl
+terraform {
+  required_version = ">= 1.5"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+  
+  backend "s3" {
+    bucket               = "company-terraform-state-${var.environment}"
+    key                  = "infrastructure/${var.team}/${var.component}/terraform.tfstate"
+    region               = "us-west-2"
+    dynamodb_table       = "terraform-state-locks"
+    encrypt              = true
+    kms_key_id           = "arn:aws:kms:us-west-2:123456789012:key/terraform-state-key"
+    workspace_key_prefix = "workspaces"
+    
+    # Versioning, SSE, lifecycle for resilience
+  }
+}
+~~~
 
 ---
-## 6) Quick Wins
-- Enable remote state + locking today.  
-- Add `infracost` GitHub Action for PRs.  
-- Automate drift detection nightly.  
-- Standardize on golden Terraform modules.  
-- Add policy-as-code checks before apply.  
+## 5) Module Composition Patterns
+~~~hcl
+module "networking" {
+  source = "./modules/networking"
+  environment         = var.environment
+  vpc_cidr            = var.vpc_cidr
+  availability_zones  = var.availability_zones
+  tags = local.common_tags
+}
+
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "~> 5.1.0"
+}
+~~~
+
+---
+## 6) Blue/Green Infrastructure Patterns
+~~~hcl
+variable "deployment_color" {
+  description = "Deployment color: blue or green"
+  type        = string
+}
+~~~
+
+~~~hcl
+# Blue environment
+module "blue_environment" {
+  count  = var.deployment_color == "blue" ? 1 : 0
+  source = "./modules/application"
+}
+~~~
+
+---
+## 7) Development Workflow & Testing
+~~~bash
+#!/bin/bash
+set -euo pipefail
+ENVIRONMENT=${1:-dev}
+PLAN_FILE="${ENVIRONMENT}.tfplan"
+
+terraform workspace select ${ENVIRONMENT} || terraform workspace new ${ENVIRONMENT}
+terraform init -backend-config=backends/${ENVIRONMENT}.hcl -upgrade
+terraform validate
+terraform plan -var-file="${ENVIRONMENT}.tfvars" -out=${PLAN_FILE}
+terraform apply ${PLAN_FILE}
+~~~
+
+~~~go
+package test
+import (
+    "testing"
+    "github.com/gruntwork-io/terratest/modules/terraform"
+    "github.com/stretchr/testify/assert"
+)
+
+func TestTerraformVPCModule(t *testing.T) {
+    terraformOptions := &terraform.Options{
+        TerraformDir: "../modules/vpc",
+        Vars: map[string]interface{}{
+            "environment": "test",
+            "vpc_cidr":    "10.0.0.0/16",
+        },
+    }
+    defer terraform.Destroy(t, terraformOptions)
+    terraform.InitAndApply(t, terraformOptions)
+    vpcId := terraform.Output(t, terraformOptions, "vpc_id")
+    assert.NotEmpty(t, vpcId)
+}
+~~~
+
+---
+## 8) Team Scaling & State Sharing
+~~~plaintext
+terraform-states/
+├── platform-team/
+│   ├── networking/
+│   └── security/
+├── app-team-1/
+│   ├── frontend/
+│   └── api/
+└── data-team/
+    ├── pipeline/
+    └── warehouse/
+~~~
+
+---
+## 9) Security & OIDC Integration
+~~~hcl
+resource "aws_iam_openid_connect_provider" "github" {
+  url = "https://token.actions.githubusercontent.com"
+  client_id_list = ["sts.amazonaws.com"]
+}
+~~~
+
+---
+## 10) Disaster Recovery & State Recovery
+~~~bash
+#!/bin/bash
+backup_state() {
+    local environment=$1
+    terraform state pull > "backups/${environment}-$(date +%F).tfstate"
+    gzip "backups/${environment}-$(date +%F).tfstate"
+    aws s3 cp "backups/${environment}-$(date +%F).tfstate.gz" s3://company-terraform-backups/${environment}/
+}
+~~~
+
+---
+## 11) Compliance & Governance
+~~~hcl
+# Sentinel policy example
+mandatory_s3_encryption = rule {
+    all tfplan.resource_changes as _, rc {
+        rc.type is "aws_s3_bucket" implies
+            rc.change.after.server_side_encryption_configuration is not null
+    }
+}
+~~~
+
+---
+## 12) Cost Optimization & Monitoring
+~~~hcl
+locals {
+  common_tags = {
+    Environment   = var.environment
+    Team          = var.team_name
+    Project       = var.project_name
+    ManagedBy     = "terraform"
+  }
+}
+
+resource "aws_budgets_budget" "terraform_resources" {
+  name         = "terraform-${var.environment}-budget"
+  budget_type  = "COST"
+  limit_amount = var.monthly_budget_limit
+  limit_unit   = "USD"
+  time_unit    = "MONTHLY"
+}
+~~~
+
+---
+## 13) Risks & Trade-offs
+❌ Local state → corruption, data loss → ✅ remote state + locking + versioning  
+❌ Over-privileged IAM → security risk → ✅ OIDC federation + least-privilege  
+❌ Unreviewed applies → outages → ✅ mandatory PR reviews + policy checks  
+❌ State conflicts → team blocking → ✅ proper workspace/directory isolation  
+❌ No disaster recovery → permanent data loss → ✅ automated backups + tested recovery  
+
+---
+## 14) Quick Wins
+- Implement remote state with locking and encryption today  
+- Add Infracost integration for cost visibility in PRs  
+- Set up OIDC federation to eliminate long-lived credentials  
+- Establish workspace/directory isolation strategy  
+- Automate policy checks with Conftest or Sentinel  
+- Create state backup automation scripts  
+- Implement comprehensive tagging strategy for cost allocation  
 
 [END OF TEMPLATE]

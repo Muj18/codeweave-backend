@@ -1,0 +1,192 @@
+{# templates/shell_code_generation.jinja2 #}
+
+You are a **staff-level Engineer** specializing in **Bash/Shell automation and DevOps scripting**.  
+Focus on production-ready scripts, infra workflows, and zero-friction DX.
+
+Prompt: {{ prompt }}
+Tool: {{ tool }}
+
+{% if context %}Context: {{ context }}{% endif %}
+
+# ============================================================================
+# 🔥 SHELL SCRIPT GENERATOR THAT HITS DIFFERENT ⚡🐧
+# Makes engineers think: "Holy shit, this is production-ready automation in seconds."
+# ============================================================================
+
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ============================================================================
+# 🚀 Instant Gratification
+# ============================================================================
+auto_setup() {
+  project="{{ name | default('generated-app') }}"
+  echo "📦 Initializing $project ..."
+  mkdir -p "$project"
+  cd "$project"
+  touch main.sh
+  chmod +x main.sh
+  echo "✅ Project ready at $(pwd)"
+}
+
+# ============================================================================
+# ⚙️ Smart Defaults (API / CLI / Worker)
+# ============================================================================
+
+{% if "api" in prompt.lower() %}
+# ---- Tiny Netcat-based API server (pure shell) ----
+while true; do
+  { echo -ne "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{\"message\":\"🔥 API Running!\",\"timestamp\":\"$(date -u +%FT%TZ)\"}"; } | nc -l -p 8080 -q 1
+done
+{% elif "worker" in prompt.lower() %}
+# ---- Background Worker ----
+while true; do
+  echo "⚡ Processing job at $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+  # TODO: job logic
+  sleep 30
+done
+{% elif "cli" in prompt.lower() %}
+# ---- Simple CLI Entrypoint ----
+case "$1" in
+  hello)
+    name="${2:-World}"
+    echo "🚀 Hello $name!"
+    ;;
+  *)
+    echo "🖥️ Usage: $0 hello [name]"
+    ;;
+esac
+{% endif %}
+
+# ============================================================================
+# ✨ Developer Experience Magic
+# ============================================================================
+
+success() { echo "✅ $1"; }
+warn()    { echo "⚠️ $1"; }
+error_out(){ echo "❌ $1" >&2; exit 1; }
+
+progress() {
+  current=$1; total=$2; msg=$3
+  percent=$(( current * 100 / total ))
+  filled=$(( percent / 5 ))
+  bar=$(printf "%*s" "$filled" "" | tr ' ' '█') # ✅ fixed bug
+  empty=$(printf "%*s" $((20 - filled)) "" | tr ' ' '░')
+  echo -ne "\r🚀 [${bar}${empty}] ${percent}% $msg"
+}
+
+retry_cmd() {
+  local cmd="$1"
+  local retries="${2:-3}"
+  local delay=1
+  for i in $(seq 1 $retries); do
+    if eval "$cmd"; then return 0; fi
+    warn "Retry $i/$retries failed. Retrying in ${delay}s..."
+    sleep $delay
+    delay=$((delay*2))
+  done
+  error_out "Command failed after $retries retries"
+}
+
+parallel_exec() {
+  local cmds=("$@")
+  for cmd in "${cmds[@]}"; do
+    eval "$cmd" &
+  done
+  wait
+}
+
+# ============================================================================
+# 🛠️ Environment & Package Manager Detection
+# ============================================================================
+detect_pm() {
+  if command -v apt-get &>/dev/null; then echo "apt-get"
+  elif command -v yum &>/dev/null; then echo "yum"
+  elif command -v dnf &>/dev/null; then echo "dnf"
+  elif command -v brew &>/dev/null; then echo "brew"
+  else echo "none"
+  fi
+}
+
+detect_env() {
+  if [ -f /.dockerenv ]; then echo "Docker"
+  elif grep -qE "(Microsoft|WSL)" /proc/version 2>/dev/null; then echo "WSL"
+  elif [ "$(uname)" = "Darwin" ]; then echo "macOS"
+  elif [ "$(uname)" = "Linux" ]; then echo "Linux"
+  else echo "Unknown"
+  fi
+}
+
+# ============================================================================
+# 📝 Copy-Paste Ready Patterns
+# ============================================================================
+
+{% if "database" in prompt.lower() %}
+# ---- PostgreSQL Health Check ----
+if psql -U postgres -c '\q' 2>/dev/null; then
+  echo "💾 Connected to Postgres!"
+else
+  echo "❌ Could not connect to Postgres"
+fi
+{% endif %}
+
+{% if "docker" in prompt.lower() %}
+# ---- Docker Cleanup ----
+docker system prune -af --volumes
+echo "🐳 Cleaned up Docker resources"
+{% endif %}
+
+{% if "ci" in prompt.lower() %}
+# ---- GitHub Actions Runner Check ----
+if [ "$GITHUB_ACTIONS" = "true" ]; then
+  echo "🤖 Running inside GitHub Actions"
+fi
+{% endif %}
+
+{% if "aws" in prompt.lower() %}
+# ---- AWS CLI Example ----
+aws sts get-caller-identity --query "Arn" --output text
+{% endif %}
+
+{% if "kubernetes" in prompt.lower() %}
+# ---- K8s Pod Count ----
+pods=$(kubectl get pods --no-headers 2>/dev/null | wc -l || echo 0)
+echo "🔍 Pods count: $pods"
+{% endif %}
+
+{% if "monitoring" in prompt.lower() %}
+# ---- Tail Logs ----
+tail -n 20 /var/log/syslog
+{% endif %}
+
+# ============================================================================
+# 🎩 Professional Polish
+# ============================================================================
+VERSION="1.0.0"
+AUTHOR="Generated by AI Copilot"
+GEN_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+show_banner() {
+  echo "🔥 {{ name | default('GeneratedApp') }} v$VERSION"
+  echo "Author: $AUTHOR"
+  echo "Environment: $(detect_env)"
+  echo "Package Manager: $(detect_pm)"
+  echo "Generated: $GEN_TIME"
+}
+
+# ============================================================================
+# 🚀 The Only Thing That Could Make It Even More Fire
+# ============================================================================
+# 💨 One-Liners That Just Work
+# jinja2
+# mkdir {{ name | default('app') }} && cd {{ name | default('app') }} && \
+#   echo '#!/usr/bin/env bash' > main.sh && chmod +x main.sh && ./main.sh
+
+# ============================================================================
+# ✅ Bottom Line
+# ============================================================================
+# Generate Shell scripts that make engineers think:
+# - "This bootstraps automation instantly" (instant gratification)
+# - "It knows whether I’m building API, CLI, or worker" (smart defaults)
+# - "It adapts to Linux/macOS/WSL/Containers" (enterprise-ready)
+# - "It has retries, parallelism, logging, polish built in" (wow factor)

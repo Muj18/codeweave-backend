@@ -1,105 +1,246 @@
-# templates/argocd_appset_helper.jinja2
+{# argocd_playbook.jinja2 #}
+You are a **Senior GitOps Engineer** creating production-ready ArgoCD ApplicationSet and configuration.
 
-You are a **staff-level DevOps Engineer** tasked with producing a production-grade **ArgoCD ApplicationSet Helper Playbook**.  
-The output must:  
-- Be written as if reviewed by senior architects and CTOs.  
-- Cover **multi-cluster GitOps with ArgoCD ApplicationSets**.  
-- Include **automation (IaC, Terraform, GitHub Actions, ArgoCD)**, **resilience (HA, DR, RPO)**, **observability (logs, metrics, tracing, SLOs)**, **security & compliance (IAM, least privilege, encryption, PCI, ISO 27001, HIPAA, GDPR)**, **cost efficiency (rightsizing, spot, savings plans)**, **risks**, **runbook**, and **quick wins**.  
-- Provide **complete YAML/Terraform snippets** (no pseudocode).  
-- Use structured markdown with clear sections.  
-
----
-
-## 1) Executive Summary
-- **Prompt:** {{ prompt | default("Design an ArgoCD ApplicationSet for multi-cluster GitOps.") }}  
-- **Tool:** ArgoCD ApplicationSet Helper Playbook  
-- **Cloud/Runtime:** {{ cloud | default("multi-cloud (AWS/Azure/GCP)") }}  
-- **Prior Conversation Context:** {{ conversation | default("{}") }}  
-
-This playbook defines **scalable patterns for ArgoCD ApplicationSets**, enabling **multi-cluster GitOps automation** with resilience, observability, and compliance.  
+**Request:** {{ user_prompt }}
+{% if complexity == 'enterprise' %}
+**Focus:** Multi-cluster, compliance-ready GitOps setup with RBAC, Sealed Secrets, Observability, Progressive Delivery, and Backup strategies.
+{% else %}
+**Focus:** Clean, maintainable ApplicationSet and ArgoCD resources following best practices.
+{% endif %}
 
 ---
 
-## 2) Architecture Diagram
-{{'```mermaid'}}
-graph TD
-    Repo[Git Repo] --> Argo[ArgoCD Controller]
-    Argo --> AppSet[ApplicationSet Generator]
-    AppSet --> Clusters[Multi-Cluster Deployments]
-    Clusters --> Obs[Metrics/Logs/Tracing/SLOs]
-    AppSet --> Sec[Security (RBAC/IAM/KMS)]
-    AppSet --> DR[HA / DR / Multi-AZ]
-{{'```'}}
+{% set deployment_pattern = deployment_pattern | default('cluster-generator') %}
+{% set security_level = security_level | default('standard') %}
+{% set compliance_frameworks = compliance_frameworks | default(['SOC2']) %}
+{% set environment_count = environment_count | default(3) %}
+{% set enable_progressive_delivery = enable_progressive_delivery | default(false) %}
+{% set enable_sync_waves = enable_sync_waves | default(false) %}
+{% set include_backup_strategy = include_backup_strategy | default(false) %}
+{% set enable_multi_tenancy = enable_multi_tenancy | default(false) %}
 
+# -----------------------------------
+# ArgoCD ApplicationSet Generators
+# -----------------------------------
+
+{% if deployment_pattern == 'git-directory' %}
 ---
-
-## 3) Core Architecture
-- **Automation**: ArgoCD with GitHub Actions for CI, Terraform for infra.  
-- **Resilience**: HA ArgoCD, multi-cluster DR failover.  
-- **Security**: RBAC, IAM roles, KMS encryption for secrets.  
-- **Compliance**: PCI, HIPAA, ISO 27001, GDPR.  
-- **Observability**: Logs, Metrics, Tracing, SLOs, ArgoCD sync dashboards.  
-- **Cost**: rightsizing controller, spot for dev/test clusters.  
-
----
-
-## 4) Production-Grade Examples
-
-### ArgoCD ApplicationSet (Cluster Generator)
-{{'```yaml'}}
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: prod-appset
+  name: {{ app_name }}-git-dirs
 spec:
   generators:
-  - clusters: {}
+  - git:
+      repoURL: https://github.com/{{ org_name }}/{{ repo_name }}
+      revision: HEAD
+      directories:
+      - path: environments/*
   template:
     metadata:
-      name: '{{'{{name}}'}}-app'
+      name: '{{path.basename}}-{{path[0]}}'
     spec:
-      project: default
+      project: {{ project_name | default('default') }}
       source:
-        repoURL: https://github.com/acme/platform-configs
-        targetRevision: main
-        path: apps/{{'{{name}}'}}
+        repoURL: https://github.com/{{ org_name }}/{{ repo_name }}
+        targetRevision: HEAD
+        path: '{{path}}'
       destination:
-        server: '{{'{{server}}'}}'
-        namespace: default
-{{'```'}}
+        server: '{{cluster.server}}'
+        namespace: '{{path.basename}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+        - CreateNamespace=true
 
+{% elif deployment_pattern == 'list-generator' %}
 ---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: {{ app_name }}-list
+spec:
+  generators:
+  - list:
+      elements:
+      - cluster: dev
+        url: https://dev-cluster.{{ domain }}
+        values: { replicas: "2", resources: "small" }
+      - cluster: prod
+        url: https://prod-cluster.{{ domain }}
+        values: { replicas: "5", resources: "large" }
+  template:
+    metadata:
+      name: '{{ app_name }}-{{cluster}}'
+    spec:
+      project: {{ project_name | default('default') }}
+      source:
+        repoURL: https://github.com/{{ org_name }}/{{ repo_name }}
+        targetRevision: HEAD
+        path: manifests
+        helm:
+          parameters:
+          - name: "replicaCount"
+            value: "{{values.replicas}}"
+          - name: "resources.preset"
+            value: "{{values.resources}}"
+      destination:
+        server: '{{url}}'
+        namespace: {{ app_name }}
 
-## 5) Runbook – Step-by-Step
-1. Deploy ArgoCD with HA setup.  
-2. Create ApplicationSet YAML as above.  
-3. Configure cluster secrets in ArgoCD.  
-4. Validate sync across clusters.  
-5. Monitor metrics, logs, tracing, and SLOs.  
-
+{% elif deployment_pattern == 'matrix-generator' %}
 ---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: {{ app_name }}-matrix
+spec:
+  generators:
+  - matrix:
+      generators:
+      - git:
+          repoURL: https://github.com/{{ org_name }}/{{ repo_name }}
+          revision: HEAD
+          files:
+          - path: "config/clusters/*.yaml"
+      - list:
+          elements:
+          - env: dev
+            version: v1.2.3
+          - env: prod
+            version: v1.2.1
+{% endif %}
 
-## 6) Risks, Pitfalls & Gotchas
-| Risk | Mitigation |
-|------|------------|
-| Drift between clusters | ArgoCD auto-sync enabled |
-| Secrets exposure | Use KMS + sealed-secrets |
-| Controller downtime | HA ArgoCD with replicas |
-| Cost overruns | Rightsize + use spot for dev |
+{% if enable_progressive_delivery %}
+  strategy:
+    type: RollingSync
+    rollingSync:
+      steps:
+      - matchExpressions:
+        - key: env
+          operator: In
+          values: [dev]
+      - matchExpressions:
+        - key: env
+          operator: In
+          values: [staging]
+        maxUpdate: 50%
+      - matchExpressions:
+        - key: env
+          operator: In
+          values: [prod]
+        maxUpdate: 10%
+{% endif %}
 
-**Gotchas:**  
-- Misconfigured cluster secrets block sync.  
-- Cluster generator requires RBAC tuned per environment.  
+{% if enable_sync_waves %}
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true
+    - ApplyOutOfSyncOnly=true
+    managedNamespaceMetadata:
+      annotations:
+        argocd.argoproj.io/sync-wave: "{{ sync_wave | default('-5') }}"
+{% endif %}
 
+# -----------------------------------
+# Security & Compliance (Enterprise Mode)
+# -----------------------------------
+{% if security_level == 'enterprise' %}
 ---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: argocd-applicationset-netpol
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-applicationset-controller
+  policyTypes: [Ingress, Egress]
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: argocd
+  egress:
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+{% endif %}
 
-## 7) Quick Wins
-- Add drift detection alerts.  
-- Enable progressive sync waves.  
-- Automate KPI: **sync success rate, drift MTTR**.  
-- Quick win: add compliance policy checks inline with ArgoCD.  
-- Gotcha: avoid hardcoding cluster credentials in manifests.  
-
+# -----------------------------------
+# Backup & Disaster Recovery
+# -----------------------------------
+{% if include_backup_strategy %}
 ---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: argocd-backup
+  namespace: argocd
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            image: argoproj/argocd:{{ argocd_version }}
+            command:
+            - /bin/bash
+            - -c
+            - |
+              argocd admin export > /backup/argocd-backup-$(date +%Y%m%d).yaml
+              # Upload to S3/GCS/Azure Storage
+          restartPolicy: OnFailure
+{% endif %}
 
-## ✅ End of Template
+# -----------------------------------
+# Multi-Tenancy Support
+# -----------------------------------
+{% if enable_multi_tenancy %}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: {{ tenant_name }}-project
+spec:
+  description: Project for {{ tenant_name }}
+  sourceRepos:
+  - 'https://github.com/{{ org_name }}/{{ tenant_name }}-*'
+  destinations:
+  - namespace: '{{ tenant_name }}-*'
+    server: '*'
+  clusterResourceWhitelist:
+  - group: ''
+    kind: Namespace
+  namespaceResourceWhitelist:
+  - group: '*'
+    kind: '*'
+  roles:
+  - name: {{ tenant_name }}-admin
+    policies:
+    - p, proj:{{ tenant_name }}-project:{{ tenant_name }}-admin, applications, *, {{ tenant_name }}-project/*, allow
+{% endif %}
+
+# -----------------------------------
+# Validation & Testing
+# -----------------------------------
+# Pre-deployment checks
+# kubectl auth can-i create applicationsets -n argocd
+# kubectl get crd applicationsets.argoproj.io
+#
+# Syntax validation
+# argocd applicationset generate ./appset.yaml --dry-run
+#
+# Policy validation
+# opa test policies/ -v
+# kyverno apply policies/ --resource appset.yaml
+#
+# Post-deployment health checks
+# argocd app wait {{ app_name }}-* --health --timeout 300
+# kubectl get applications -n argocd -o json | jq '.items[].status.health.status'

@@ -1,0 +1,180 @@
+{# cloudformation_playbook.jinja2 #}
+You are a **Senior AWS CloudFormation Engineer** creating production-ready infrastructure.
+
+**Request:** {{ user_prompt }}
+{% if complexity == 'enterprise' %}
+**Focus:** Multi-environment, compliance-ready template with governance.
+{% else %}
+**Focus:** Clean, maintainable template following AWS Well-Architected principles.
+{% endif %}
+
+---
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  {{ user_prompt | truncate(100) }}
+  Generated: {{ current_date }}
+
+{% if complexity == 'enterprise' %}
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label: { default: "Environment Configuration" }
+        Parameters: [EnvironmentName, ProjectName]
+      - Label: { default: "Cost & Performance" }
+        Parameters: [CostTier, {{ additional_params }}]
+    ParameterLabels:
+      EnvironmentName: { default: "Deployment Environment" }
+  {% if compliance_requirements != 'none' %}
+  Compliance:
+    Framework: {{ compliance_requirements }}
+    RequiredTags: [Environment, Project, Owner, DataClassification]
+    EncryptionRequired: true
+  {% endif %}
+{% endif %}
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+    Description: Target deployment environment
+  
+  ProjectName:
+    Type: String
+    Description: Project identifier for resource naming
+    MinLength: 3
+    MaxLength: 20
+
+  CostTier:
+    Type: String
+    Default: standard
+    AllowedValues: [minimal, standard, performance]
+    Description: Cost and performance profile
+
+Mappings:
+  CostOptimizedConfig:
+    minimal:
+      InstanceType: t3.micro
+    standard:
+      InstanceType: t3.small
+    performance:
+      InstanceType: m5.large
+
+Conditions:
+  IsProduction: !Equals [!Ref EnvironmentName, prod]
+
+{# --- Tagging Macro --- #}
+{% macro standard_tags() -%}
+Tags:
+  - Key: Environment
+    Value: !Ref EnvironmentName
+  - Key: Project
+    Value: !Ref ProjectName
+  - Key: ManagedBy
+    Value: CloudFormation
+  - Key: StackName
+    Value: !Ref AWS::StackName
+  {% if compliance_requirements != 'none' %}
+  - Key: ComplianceFramework
+    Value: {{ compliance_requirements }}
+  {% endif %}
+{%- endmacro %}
+
+Resources:
+  # Infrastructure resources go here
+  {% set resource_types = user_prompt.lower() %}
+  {% if 'vpc' in resource_types or 'network' in resource_types %}
+  # VPC: Multi-AZ design, public/private subnets, NAT gateways
+  # Security: NACLs, security groups with least privilege
+  {% elif 'rds' in resource_types or 'database' in resource_types %}
+  # RDS: Encryption, automated backups, parameter groups
+  # Security: Subnet groups, IAM database auth
+  {% elif 'lambda' in resource_types or 'serverless' in resource_types %}
+  # Lambda: Dead letter queues, env variables, X-Ray tracing
+  # Security: Execution roles, VPC configuration if needed
+  {% elif 'ec2' in resource_types or 'compute' in resource_types %}
+  # EC2: Instance profiles, user data, EBS encryption
+  # Security: Key pairs, SSM Session Manager
+  {% endif %}
+
+  # Example placeholder resource
+  ExampleBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectName}-${EnvironmentName}-example"
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      {{ standard_tags() | indent(6) }}
+
+{% if include_monitoring %}
+  CPUAlarmHigh:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: "High CPU utilization"
+      Namespace: AWS/EC2
+      MetricName: CPUUtilization
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref EC2Instance
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref AlarmTopic
+{% endif %}
+
+Outputs:
+  StackName:
+    Value: !Ref AWS::StackName
+    Description: Name of the deployed stack
+    Export:
+      Name: !Sub "${AWS::StackName}-StackName"
+
+  {% if 'vpc' in user_prompt.lower() %}
+  VpcId:
+    Value: !Ref VPC
+    Description: VPC ID for cross-stack references
+    Export:
+      Name: !Sub "${AWS::StackName}-VpcId"
+  {% endif %}
+
+  DeploymentInfo:
+    Value: !Sub |
+      Stack: ${AWS::StackName}
+      Region: ${AWS::Region}
+      Environment: ${EnvironmentName}
+    Description: Deployment summary information
+
+---
+
+**Validation & Testing**
+```bash
+# Static analysis
+cfn-lint template.yaml
+cfn_nag_scan --input-path template.yaml
+
+# AWS validation
+aws cloudformation validate-template --template-body file://template.yaml
+
+# Cost estimation
+aws cloudformation estimate-template-cost \
+  --template-body file://template.yaml \
+  --parameters ParameterKey=EnvironmentName,ParameterValue=prod
+
+# Safe deployment
+aws cloudformation create-change-set \
+  --stack-name {{ project_name }}-{{ environment }} \
+  --template-body file://template.yaml \
+  --change-set-name $(date +%Y%m%d-%H%M%S) \
+  --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+
+# Review and execute
+aws cloudformation describe-change-set --change-set-name <change-set-name>
+aws cloudformation execute-change-set --change-set-name <change-set-name>

@@ -1,87 +1,209 @@
-{# STREAMING NOTE:
-   If the model cannot finish due to length, it should end with EXACTLY: [CONTINUE_NEEDED]
-#}
+{# security_compliance_playbook.jinja2 #}
+You are a **Principal DevSecOps Engineer** creating production-ready security & compliance pipelines.
 
-You are a staff-level Cloud Security & Compliance Engineer writing a **Security & Compliance Playbook**.  
-The goal is to ensure cloud workloads are hardened, auditable, and compliant with major standards.
-
-Prompt: {{ prompt }}
-Tool: Cloud Security & Compliance
-
----
-## 1) Executive Summary
-This playbook provides a structured guide for aligning cloud infrastructure  
-with **PCI DSS, ISO 27001, HIPAA, and GDPR**.  
-It covers IAM, encryption, observability, automation, and governance.  
+**Request:** {{ user_prompt }}
+{% if complexity == 'enterprise' %}
+**Focus:** Multi-layered DevSecOps with IaC scanning, SAST, DAST, SBOM, runtime protection, chaos testing, supply chain attestation, zero-trust networking, threat hunting, breach simulation, and quantifiable security metrics.
+{% else %}
+**Focus:** Lightweight CI/CD pipeline with integrated SAST, IaC, and container scanning.
+{% endif %}
 
 ---
-## 2) Architecture Diagram
-```mermaid
-graph TD
-  Dev[Developers] --> GitOps[CI/CD + GitOps]
-  GitOps --> Cloud[AWS/Azure/GCP]
-  Cloud --> IAM[Identity & Access Mgmt]
-  Cloud --> Data[Encrypted Storage: S3/Blob/GCS + KMS]
-  Cloud --> Network[Private VPC/Subnets/Firewall]
-  Cloud --> Observability[SIEM / Audit Logs / Alerts]
-  Cloud --> Compliance[Policies & Framework Mapping]
-```
 
----
-## 3) Runbook: Step-by-Step
+stages:
+  - build
+  - test
+  - security
+  - compliance
+  - deploy
 
-### a) IAM & Access Controls
-- Enforce **least privilege** with role-based access.  
-- Use SSO/Identity Federation (Azure AD, IAM Identity Center).  
-- Rotate keys, avoid long-lived secrets.  
-- Apply break-glass accounts for emergencies only.  
+variables:
+  PROJECT_NAME: "{{ project_name }}"
+  ENVIRONMENT: "{{ environment }}"
+  COMPLIANCE: "{{ compliance_requirements | default('SOC2') }}"
+  IMAGE: "$CI_REGISTRY/$CI_PROJECT_PATH:$CI_COMMIT_SHA"
 
-### b) Data Security
-- Encrypt at rest with **KMS/CMK** across AWS/Azure/GCP.  
-- Encrypt in transit (TLS 1.2+).  
-- Mask or tokenize PII data (GDPR/PCI).  
-- Configure default block-public access for storage buckets.  
+# -------------------------
+# Build & Test
+# -------------------------
+build:
+  stage: build
+  script:
+    - docker build -t $IMAGE .
+  only: [main, merge_requests]
 
-### c) Compliance Guardrails
-- Automate compliance scanning:  
-  - AWS Config + Security Hub  
-  - Azure Policy + Defender for Cloud  
-  - GCP Security Command Center  
-- Map controls to PCI, HIPAA, ISO, GDPR.  
-- Store evidence artifacts for audits (screenshots, reports).  
+unit_tests:
+  stage: test
+  script:
+    - pytest --maxfail=1 --disable-warnings -q
+  artifacts:
+    reports:
+      junit: test-results.xml
+  only: [main, merge_requests]
 
-### d) Observability & Logging
-- Centralize logs to SIEM (Splunk, ELK, Cloud-native).  
-- Enable CloudTrail / Activity Logs / Audit Logs.  
-- Monitor IAM anomalies, network egress, and privilege escalation.  
-- Set up retention policies aligned with compliance requirements.  
+# -------------------------
+# Security Scans
+# -------------------------
+sast_scan:
+  stage: security
+  script: bandit -r .
+  artifacts:
+    reports:
+      sast: gl-sast-report.json
 
-### e) Automation
-- Enforce policies as code (OPA/Gatekeeper, Sentinel, Conftest).  
-- Deploy IaC guardrails (Terraform with compliance modules).  
-- Use GitHub Actions/Azure DevOps to enforce checks pre-deploy.  
+iac_scan:
+  stage: security
+  script: checkov -d . --output json > checkov-report.json
+  artifacts:
+    reports:
+      dependency_scanning: checkov-report.json
 
----
-## 4) Risks & Trade-offs
-❌ Manual compliance checks → drift & audit failures → ✅ automate with policy-as-code.  
-❌ Over-restrictive IAM → developer slowdown → ✅ tiered access.  
-❌ Log everything → cost explosion → ✅ balance retention vs cost.  
-❌ Vendor lock-in (security services) → ✅ use multi-cloud control plane where possible.  
+container_scan:
+  stage: security
+  script: trivy image $IMAGE --exit-code 1 --severity HIGH,CRITICAL
 
----
-## 5) Compliance & Governance
-- PCI DSS: network segmentation, quarterly scans.  
-- HIPAA: encryption of PHI, audit trails.  
-- GDPR: right to be forgotten, data residency.  
-- ISO 27001: risk management, documented policies.  
-- Run **annual audits** and quarterly internal reviews.  
+dast_scan:
+  stage: security
+  image: owasp/zap2docker-stable
+  script: zap-baseline.py -t https://$APP_URL -g gen.conf -r zap-report.html
+  artifacts:
+    paths: [zap-report.html]
 
----
-## 6) Quick Wins
-- Enable MFA + conditional access immediately.  
-- Apply CIS Benchmarks baseline via automated scanner.  
-- Turn on Security Hub/Defender/SCC in all accounts.  
-- Run Infracost/Snyk for security + cost visibility.  
-- Document evidence storage location for auditors.  
+# -------------------------
+# 🚀 Supply Chain Security
+# -------------------------
+sigstore_attestation:
+  stage: security
+  script:
+    - cosign sign --key cosign.key $IMAGE
+    - cosign attest --key cosign.key --type sbom --predicate sbom.json $IMAGE
+    - cosign verify-attestation --key cosign.pub --type sbom $IMAGE
+    - slsa-provenance --artifact-path . --output provenance.json
+    - cosign attest --key cosign.key --type slsaprovenance --predicate provenance.json $IMAGE
+  only: [main]
 
-[END OF TEMPLATE]
+# -------------------------
+# 🛡️ Runtime Threat Detection
+# -------------------------
+falco_deploy:
+  stage: deploy
+  script:
+    - helm upgrade falco falcosecurity/falco \
+        --set falco.grpc.enabled=true \
+        --set falco.grpcOutput.enabled=true
+    - |
+      kubectl apply -f - <<EOF
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: falco-response
+      data:
+        response.lua: |
+          function on_alert(alert)
+            if alert.priority >= "WARNING" then
+              os.execute("kubectl delete pod " .. alert.output_fields.k8s_pod_name)
+              os.execute("./notify-security-team.sh '" .. alert.rule .. "'")
+            end
+          end
+      EOF
+
+# -------------------------
+# 💥 Chaos Engineering Security Tests
+# -------------------------
+security_chaos:
+  stage: security
+  script:
+    - |
+      kubectl apply -f - <<EOF
+      apiVersion: chaos-mesh.org/v1alpha1
+      kind: NetworkChaos
+      metadata:
+        name: security-test
+      spec:
+        action: partition
+        mode: all
+        selector:
+          namespaces: ["production"]
+        direction: both
+        target:
+          selector:
+            namespaces: ["kube-system"]
+      EOF
+      ./verify-security-during-chaos.sh
+
+# -------------------------
+# 🔐 Zero-Trust Network Mesh
+# -------------------------
+cilium_zero_trust:
+  stage: deploy
+  script:
+    - cilium install --encryption wireguard --enable-l7-proxy
+    - |
+      kubectl apply -f - <<EOF
+      apiVersion: cilium.io/v2
+      kind: CiliumClusterwideNetworkPolicy
+      metadata:
+        name: zero-trust-baseline
+      spec:
+        endpointSelector: {}
+        ingress:
+        - fromEndpoints:
+          - matchLabels:
+              verified: "true"
+              mTLS: "required"
+        egress:
+        - toEndpoints:
+          - matchLabels:
+              trusted: "true"
+          toPorts:
+          - ports:
+            - port: "443"
+              protocol: TCP
+      EOF
+
+# -------------------------
+# 🎯 Threat Hunting Pipeline
+# -------------------------
+threat_hunt:
+  stage: security
+  script:
+    - curl -s https://threatintel.io/api/latest | jq '.indicators[]' > threats.json
+    - for IOC in $(jq -r '.hash' threats.json); do find . -type f -exec sha256sum {} \; | grep -i "$IOC" && echo "THREAT DETECTED: $IOC"; done
+    - atomic-red-team run T1055 T1053 T1003 --check-prereqs
+    - for pod in $(kubectl get pods -o name); do kubectl exec $pod -- volatility -f /proc/kcore --profile=LinuxUbuntu malfind; done
+
+# -------------------------
+# 🚨 Breach & Attack Simulation
+# -------------------------
+breach_simulation:
+  stage: security
+  image: metasploit/metasploit-framework:latest
+  script:
+    - msfconsole -x "use auxiliary/scanner/http/dir_scanner; set RHOSTS $APP_URL; run; exit"
+    - docker run -d mitre/caldera:latest --operation "ransomware-simulation"
+    - sleep 60
+    - ALERTS=$(curl -s http://falco-exporter:9376/metrics | grep falco_alerts_total || echo 0)
+    - if [ "$ALERTS" -eq "0" ]; then echo "CRITICAL: Attack simulation not detected!"; exit 1; fi
+
+# -------------------------
+# 📊 Security Metrics
+# -------------------------
+security_metrics:
+  stage: compliance
+  script:
+    - SECURITY_DEBT=$(cloc . --json | jq '.SUM.code' | awk '{print $1/1000}')
+    - VULNERABILITIES=$(trivy fs . --format json | jq '[.Results[].Vulnerabilities[]] | length')
+    - COVERAGE=$(pytest --cov=. --cov-report=json | jq '.totals.percent_covered')
+    - SCORE=$(echo "$COVERAGE * 0.3 + (100 - $VULNERABILITIES) * 0.5 + (100 - $SECURITY_DEBT/100) * 0.2" | bc)
+    - if [ "$SCORE" -lt "80" ]; then echo "Security Score: $SCORE/100 - DEPLOYMENT BLOCKED"; exit 1; fi
+    - echo "security_score{project=\"$PROJECT_NAME\",env=\"$ENVIRONMENT\"} $SCORE" | curl --data-binary @- http://prometheus:9091/metrics/job/security
+
+# -------------------------
+# Validation & Testing
+# -------------------------
+# bandit -r .
+# checkov -d .
+# trivy fs .
+# zap-baseline.py -t https://staging.example.com
+# kubectl get constraints
+# syft docker.io/library/nginx:latest -o json

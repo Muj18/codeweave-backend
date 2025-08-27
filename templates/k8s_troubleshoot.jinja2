@@ -1,6 +1,6 @@
 {# templates/k8s_troubleshoot.jinja2 #}
 {# STREAMING NOTE:
-   If the model cannot finish due to length, it should end with EXACTLY: [CONTINUE_NEEDED] #}
+  If the model cannot finish due to length, it should end with EXACTLY: [CONTINUE_NEEDED] #}
 
 You are a **staff-level SRE** providing a **Kubernetes troubleshooting runbook**.  
 The output must read like a **production-grade playbook** for on-call engineers.  
@@ -24,69 +24,190 @@ Troubleshooting Kubernetes requires a structured, stepwise approach:
 ## 2) Runbook: Step-by-Step
 
 ### a) Pod Failing to Start
-\`\`\`bash
-kubectl get pods -n {{ namespace | default("default") }}
+~~~bash
+kubectl get pods -n {{ namespace | default("default") }} -o wide
 kubectl describe pod {{ pod | default("sample-pod") }} -n {{ namespace | default("default") }}
 kubectl logs {{ pod | default("sample-pod") }} -n {{ namespace | default("default") }} --previous
-\`\`\`
-- Check for `ImagePullBackOff` → validate registry access & credentials  
-- Check for `CrashLoopBackOff` → review app/container logs  
 
-### b) Networking / DNS Issues
-\`\`\`bash
+# Get events sorted by timestamp for timeline analysis
+kubectl get events --sort-by='.firstTimestamp' -n {{ namespace | default("default") }}
+kubectl get events --field-selector involvedObject.name={{ pod | default("sample-pod") }} -n {{ namespace | default("default") }}
+~~~
+Check for `ImagePullBackOff`, `CrashLoopBackOff`, or `CreateContainerConfigError`.
+
+---
+
+### b) Node Pressure & Taints
+~~~bash
+kubectl describe nodes
+kubectl get nodes -o json | jq '.items[] | {name: .metadata.name, conditions: .status.conditions, taints: .spec.taints}'
+kubectl top nodes
+kubectl get pods --all-namespaces -o wide | grep {{ node_name | default("node-name") }}
+kubectl get events --field-selector source=kubelet --all-namespaces | grep -E "(MemoryPressure|DiskPressure|PIDPressure)"
+~~~
+
+---
+
+### c) RBAC Permission Issues
+~~~bash
+kubectl auth can-i get pods --as=system:serviceaccount:{{ namespace | default("default") }}:{{ service_account | default("default") }}
+kubectl auth can-i create secrets --as=system:serviceaccount:{{ namespace | default("default") }}:{{ service_account | default("default") }}
+kubectl describe clusterrolebinding,rolebinding --all-namespaces | grep {{ service_account | default("default") }}
+kubectl auth can-i --list --as=system:serviceaccount:{{ namespace | default("default") }}:{{ service_account | default("default") }}
+~~~
+
+---
+
+### d) Resource Quota Exhaustion
+~~~bash
+kubectl get resourcequota --all-namespaces
+kubectl describe resourcequota -n {{ namespace | default("default") }}
+kubectl get limitrange --all-namespaces
+kubectl describe limitrange -n {{ namespace | default("default") }}
+kubectl top pods -n {{ namespace | default("default") }} --containers=true
+~~~
+
+---
+
+### e) Networking / DNS Issues
+~~~bash
+kubectl get pods -n kube-system -l k8s-app=kube-dns
+kubectl logs -n kube-system -l k8s-app=kube-dns --tail=50
+kubectl debug {{ pod | default("sample-pod") }} -n {{ namespace | default("default") }} -it --image=nicolaka/netshoot
 kubectl exec -it {{ pod | default("sample-pod") }} -n {{ namespace | default("default") }} -- nslookup kubernetes.default
-kubectl exec -it {{ pod | default("sample-pod") }} -n {{ namespace | default("default") }} -- curl -vk https://service:port
-\`\`\`
-- Validate CoreDNS pods are healthy (`kubectl get pods -n kube-system -l k8s-app=kube-dns`)  
-- Ensure NetworkPolicy/Calico/Cilium rules are not blocking  
+kubectl exec -it {{ pod | default("sample-pod") }} -n {{ namespace | default("default") }} -- curl -vk https://kubernetes.default.svc.cluster.local
+~~~
 
-### c) Resource Pressure
-\`\`\`bash
-kubectl top pod -n {{ namespace | default("default") }}
-kubectl describe node
-\`\`\`
-- Look for `OOMKilled` or CPU throttling → tune resource requests/limits  
-- Consider Horizontal/Vertical Pod Autoscaler  
+---
 
-### d) Storage / Volume Issues
-\`\`\`bash
+### f) Service Mesh Troubleshooting (Istio/Linkerd)
+~~~bash
+kubectl get pods -n istio-system
+istioctl proxy-status {{ pod | default("sample-pod") }}.{{ namespace | default("default") }}
+istioctl proxy-config cluster {{ pod | default("sample-pod") }}.{{ namespace | default("default") }} --fqdn {{ service | default("service-name") }}.{{ namespace | default("default") }}.svc.cluster.local
+kubectl get pods -n {{ namespace | default("default") }} -o jsonpath='{.items[*].spec.containers[*].name}'
+linkerd check
+linkerd stat deploy -n {{ namespace | default("default") }}
+linkerd top deploy -n {{ namespace | default("default") }}
+~~~
+
+---
+
+### g) Resource Pressure & Performance
+~~~bash
+kubectl top pods -n {{ namespace | default("default") }} --sort-by=cpu
+kubectl top pods -n {{ namespace | default("default") }} --sort-by=memory
+kubectl describe node | grep -A5 "Allocated resources"
+kubectl get pods --all-namespaces -o json | jq -r '.items[] | select(.status.containerStatuses[]? | select(.lastState.terminated.reason == "OOMKilled")) | "\(.metadata.namespace)/\(.metadata.name)"'
+~~~
+
+---
+
+### h) Storage / Volume Issues
+~~~bash
 kubectl describe pvc {{ pvc | default("mypvc") }} -n {{ namespace | default("default") }}
-kubectl get events -n {{ namespace | default("default") }} | grep pvc
-\`\`\`
-- Ensure underlying StorageClass is available  
-- Check RWX/RWO access modes match usage  
+kubectl get events -n {{ namespace | default("default") }} --field-selector involvedObject.kind=PersistentVolumeClaim
+kubectl get storageclass
+kubectl describe storageclass {{ storage_class | default("default") }}
+kubectl describe pod {{ pod | default("sample-pod") }} -n {{ namespace | default("default") }} | grep -A10 -B5 "Mounts:"
+~~~
 
 ---
 
-## 3) Observability Hooks
-- **Logs**: Centralised aggregation with ELK/Loki, searchable by pod/namespace  
-- **Metrics**: Prometheus/Grafana for CPU, memory, network, request latency  
-- **Tracing**: Jaeger or OpenTelemetry for cross-service failures  
-- **Dashboards**: Live SLO/SLA view for latency, error rates, availability  
+## 3) Advanced Debugging Commands
+~~~bash
+kubectl cluster-info dump --output-directory=/tmp/cluster-dump
+kubectl get all --all-namespaces -o wide
+kubectl get events --all-namespaces --sort-by='.lastTimestamp' | grep -E "(Warning|Error)"
+kubectl top nodes --sort-by=cpu
+kubectl describe nodes | grep -A3 "Non-terminated Pods"
+kubectl get crd
+kubectl get {{ custom_resource | default("customresource") }} --all-namespaces
+~~~
 
 ---
 
-## 4) Risks & Trade-offs
-- ❌ Manual debugging delays MTTR → ✅ Automate via runbooks, alerts, ChatOps  
-- ❌ Over-provisioned pods → ✅ Cost impact, rightsize with HPA/VPA  
-- ❌ Lack of RBAC → ✅ On-call blocked → create least-privilege troubleshooting role  
-- ❌ Debugging in prod with `exec` → ✅ Prefer `kubectl debug` ephemeral containers  
+## 4) Prometheus Queries for Common Issues
+~~~promql
+rate(kube_pod_container_status_restarts_total[5m]) > 0
+kube_pod_status_phase{phase="Pending"} > 0
+(container_memory_usage_bytes / container_spec_memory_limit_bytes) > 0.8
+rate(container_cpu_cfs_throttled_seconds_total[5m]) / rate(container_cpu_cfs_periods_total[5m]) > 0.1
+kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes > 0.85
+rate(coredns_dns_response_rcode_count_total{rcode!="NOERROR"}[5m]) > 0
+~~~
 
 ---
 
-## 5) Compliance & Governance
-- Maintain **audit logs** of troubleshooting commands (ISO27001/GDPR)  
-- Redact **sensitive data** before exporting logs to SIEM  
-- Enforce **RBAC + MFA** for kubectl access in prod  
-- Ensure IaC (Terraform/Helm) captures any config changes → avoid drift  
+## 5) Observability Hooks
+- Logs: ELK/Loki, searchable by pod/namespace  
+- Metrics: Prometheus/Grafana  
+- Tracing: Jaeger / OpenTelemetry  
+- Dashboards: Cluster, Pod usage, CoreDNS, Istio  
 
 ---
 
-## 6) Quick Wins
-- Add **liveness/readiness probes** → stop routing to broken pods  
-- Enable **Vertical Pod Autoscaler** → reduce OOM kills  
-- Use **ephemeral debug containers** instead of exec into prod workloads  
-- Automate **top 5 playbooks** as Slack/Teams ChatOps commands  
-- Build **chaos drills** (node drain, pod kill) to validate resilience  
+## 6) Modern Debugging Features
+~~~bash
+kubectl debug {{ pod | default("sample-pod") }} -n {{ namespace | default("default") }} -it --image=busybox --target={{ container | default("app") }}
+kubectl debug node/{{ node_name | default("worker-node-1") }} -it --image=busybox
+kubectl debug {{ pod | default("sample-pod") }} -n {{ namespace | default("default") }} -it --image=busybox --copy-to=debug-pod --share-processes
+~~~
+
+---
+
+## 7) Escalation Triggers
+- Stage 1 (SRE): Basic pod/service issues  
+- Stage 2 (Platform): Cluster-level issues  
+- Stage 3 (Architecture): Design/capacity bottlenecks  
+- Immediate escalation: security, data corruption, instability  
+
+---
+
+## 8) Risks & Trade-offs
+❌ Manual debugging delays → ✅ automate via runbooks  
+❌ Over-provisioned pods → ✅ HPA/VPA  
+❌ Lack of RBAC → ✅ troubleshooting role  
+❌ Exec in prod → ✅ ephemeral debug containers  
+❌ Blind restarts → ✅ document root cause  
+
+---
+
+## 9) Compliance & Governance
+- Audit logs (ISO27001/GDPR)  
+- Redact sensitive data in SIEM  
+- RBAC + MFA enforced  
+- IaC parity (Terraform/Helm)  
+- CMDB + change management updates  
+
+---
+
+## 10) Quick Wins
+- Add probes to avoid routing to broken pods  
+- Enable VPA → fewer OOMKills  
+- Use ephemeral debug pods instead of `exec`  
+- PodDisruptionBudgets → availability in updates  
+- Automate top-5 playbooks in ChatOps  
+- Chaos drills for resilience  
+
+---
+
+## 11) Prevention & Monitoring Setup
+~~~bash
+kubectl patch configmap/audit-policy -n kube-system --patch='{"data":{"audit-policy.yaml":"apiVersion: audit.k8s.io/v1\nkind: Policy\nrules:\n- level: Namespace\n  namespaces: [\"default\", \"kube-system\"]\n  resources:\n  - group: \"\"\n    resources: [\"pods\", \"services\"]\n"}}'
+
+kubectl apply -f - <<EOF
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kube-state-metrics
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kube-state-metrics
+  endpoints:
+  - port: http-metrics
+EOF
+~~~
 
 [END OF TEMPLATE]

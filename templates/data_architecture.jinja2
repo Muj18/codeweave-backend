@@ -66,80 +66,198 @@ Source → Ingestion → Processing (ETL/ELT) → Data Lake/Warehouse → BI / M
 
 ---
 
-# 4. 🔄 ETL/ELT vs Streaming
+# 4. 📏 Volume & Sizing Framework
+| Data Volume | Architecture Pattern | Compute Recommendation | Est. Monthly Cost |
+|-------------|---------------------|------------------------|-------------------|
+| < 1TB daily | Single pipeline, scheduled batch | 2-4 vCPU, 8-16GB RAM | $500-2K (AWS) |
+| 1-10TB daily | Distributed processing (Spark/EMR) | 10-20 nodes, auto-scaling | $2K-15K (AWS) |
+| > 10TB daily | Streaming + batch hybrid (Lambda) | Dedicated clusters + serverless | $15K-100K+ (AWS) |
+| Real-time SLA | Event-driven (Kafka/Kinesis) | Stream processing engines | +30% premium |
+
+**GCP Cost Multipliers:** 0.9-1.1x AWS  
+**Azure Cost Multipliers:** 1.0-1.2x AWS  
+
+---
+
+# 5. 🔄 ETL/ELT vs Streaming
 - **ETL/ELT** for batch/analytical workloads (dashboards, reporting)  
 - **Streaming** for real-time workloads (IoT, fraud detection, logs)  
 - **Hybrid (Lambda/Kappa)** = combine both for enterprise-grade resilience  
 
 ---
 
-# 5. 📦 Code Scaffolding (Optional)
-Always output complete files with correct extensions.  
+# 6. 🔀 Migration Path Strategy
+## Current State Assessment
+- Document existing data sources, volumes, SLAs  
+- Identify technical debt (outdated ETL, manual processes)  
+- Map compliance and governance gaps  
 
-Example:  
+## Future State Transition
+**Phase 1 (Months 1-3):** Parallel implementation  
+- New ingestion alongside existing systems  
+- Data validation and reconciliation  
+- Limited production traffic (10-20%)  
 
-### airflow_dag.py
-    ```python
-    from airflow import DAG
-    from airflow.operators.python import PythonOperator
-    from datetime import datetime
+**Phase 2 (Months 4-6):** Gradual cutover  
+- Increase new system load (50-80%)  
+- Decommission legacy components  
+- Full observability and alerting  
 
-    def etl_job():
-        # Spark / dbt job trigger
-        pass
-
-    with DAG("daily_etl",
-             start_date=datetime(2023,1,1),
-             schedule_interval="@daily") as dag:
-        run_etl = PythonOperator(
-            task_id="etl",
-            python_callable=etl_job
-        )
-    ```
+**Phase 3 (Months 7-12):** Optimization  
+- Cost optimization and rightsizing  
+- Advanced features (ML, real-time analytics)  
+- Full governance implementation  
 
 ---
 
-# 6. 🔐 Security, Access, and Compliance
+# 7. ⚠️ Failure Scenarios & Mitigations
+| What Could Go Wrong | Probability | Impact | Mitigation Strategy |
+|---------------------|-------------|---------|---------------------|
+| Pipeline data corruption | High | Critical | Checkpointing, data validation, rollback capability |
+| Storage cost explosion | High | Financial | Automated lifecycle policies, compression, monitoring |
+| Compliance audit failure | Medium | Legal | Data lineage, retention policies, access controls |
+| Vendor lock-in escalation | Medium | Strategic | Multi-cloud abstraction, open-source alternatives |
+| Key personnel departure | Medium | Operational | Documentation, cross-training, managed services |
+| Data source API changes | High | Operational | Schema evolution, backward compatibility, monitoring |
+
+---
+
+# 8. 📦 Code Scaffolding (Optional)
+Always output complete files with correct extensions.  
+
+Example: airflow_dag.py  
+
+    from airflow import DAG
+    from airflow.operators.python import PythonOperator
+    from airflow.providers.postgres.operators.postgres import PostgresOperator
+    from datetime import datetime, timedelta
+
+    default_args = {
+       'owner': 'data-eng',
+       'depends_on_past': False,
+       'start_date': datetime(2024, 1, 1),
+       'email_on_failure': True,
+       'email_on_retry': False,
+       'retries': 3,
+       'retry_delay': timedelta(minutes=5),
+       'sla': timedelta(hours=2)
+    }
+
+    def extract_and_validate(**context):
+       """Extract with data quality checks"""
+       import pandas as pd
+       from great_expectations import get_context
+       
+       # Extract
+       df = pd.read_sql("SELECT * FROM orders WHERE created_date >= %s", 
+                        conn, params=[context['ds']])
+       
+       # Validate
+       ge_context = get_context()
+       suite = ge_context.get_expectation_suite("orders_suite")
+       results = ge_context.run_validation_operator("action_list_operator", 
+                                                   assets_to_validate=[df], 
+                                                   expectation_suite=suite)
+       if not results.success:
+           raise ValueError("Data quality validation failed")
+       
+       return df.to_dict()
+
+    with DAG('daily_etl_pipeline',
+            default_args=default_args,
+            description='Production ETL with data quality',
+            schedule_interval='@daily',
+            catchup=False,
+            max_active_runs=1,
+            tags=['etl', 'production']) as dag:
+       
+       extract_task = PythonOperator(
+           task_id='extract_validate',
+           python_callable=extract_and_validate,
+           pool='data_pool'
+       )
+       
+       transform_task = PostgresOperator(
+           task_id='transform_data',
+           postgres_conn_id='warehouse',
+           sql='sql/transform_orders.sql'
+       )
+       
+       data_quality_check = PythonOperator(
+           task_id='final_quality_check',
+           python_callable=lambda: print("Quality checks passed")
+       )
+       
+       extract_task >> transform_task >> data_quality_check
+
+---
+
+# 9. 🔐 Security, Access, and Compliance
 - IAM roles, least-privilege access to S3/GCS/ADLS  
 - Encrypt at rest & in transit (KMS, CMEK)  
 - GDPR/CCPA compliance → masking, lineage tracking  
 - Audit logs: CloudTrail, Stackdriver, Azure Monitor  
 - Data lineage: OpenLineage, DataHub, Atlas  
+- Row-level security for sensitive data  
+- Automated PII detection and masking  
 
 ---
 
-# 7. 🔁 CI/CD for Data Pipelines
+# 10. 🔁 CI/CD for Data Pipelines
 - GitOps for dbt or Airflow DAGs  
 - Testing with dbt test, Great Expectations, pytest  
 - Automated deployments: GitHub Actions, GitLab CI, Azure Pipelines  
+- Schema validation in CI/CD pipeline  
+- Data contract enforcement  
 
 ---
 
-# 8. 📊 Monitoring & Observability
+# 11. 📊 Monitoring & Observability
 - Pipeline health: Airflow UI / ADF monitor  
 - Metrics: Prometheus + Grafana, CloudWatch, Stackdriver  
 - Data quality: Great Expectations, Monte Carlo, Soda  
+- SLA monitoring with automated alerts  
+- Data freshness tracking  
+- Cost anomaly detection  
 
 ---
 
-# 9. 📈 KPI Scorecard
-| Dimension       | /10 | Gap (one-liner)                |
-|-----------------|-----|--------------------------------|
-| Cost Efficiency | [ ] | [biggest waste lever]          |
-| Security        | [ ] | [highest-risk gap]             |
-| Reliability     | [ ] | [weakest SLO/SLA point]        |
-| Delivery Speed  | [ ] | [pipeline constraint]          |
+# 12. 📈 KPI Scorecard
+| Dimension       | /10 | Gap (one-liner)             | Target SLA                    |
+|-----------------|-----|-----------------------------|--------------------------------|
+| Cost Efficiency | [ ] | [biggest waste lever]       | < $X per TB processed          |
+| Security        | [ ] | [highest-risk gap]          | Zero data breaches             |
+| Reliability     | [ ] | [weakest SLO/SLA point]     | 99.9% pipeline uptime          |
+| Delivery Speed  | [ ] | [pipeline constraint]       | < 4hr batch SLA                |
+| Data Quality    | [ ] | [validation coverage]       | < 0.1% error rate              |
 
 ---
 
-# 10. 💡 Optional Add-ons
+# 13. 💡 Optional Add-ons
 - CDC with Debezium or DMS  
 - Iceberg/Delta Lake for schema evolution + time travel  
 - Data contracts with JSON Schema / Protobuf  
 - Lineage graphs with Marquez / DataHub  
+- Real-time feature store (Feast, Tecton)  
+- ML pipeline integration (MLflow, Kubeflow)  
 
 ---
 
-# 11. 📬 Deployment Support CTA
+# 14. 💰 Cost Optimization Framework
+**Immediate Wins**  
+- Lifecycle policies: Archive data > 90 days to cheaper storage  
+- Compression: Enable Parquet/ORC with Snappy compression  
+- Partitioning: Partition by date/region for query performance  
+- Spot instances: Use for non-critical batch processing  
+
+**Ongoing Optimization**  
+- Reserved capacity for predictable workloads  
+- Auto-scaling policies based on queue depth  
+- Query optimization and materialized views  
+- Data tiering strategies (hot/warm/cold)  
+
+---
+
+# 15. 📬 Deployment Support CTA
 Want help implementing this end-to-end pipeline securely and cost-effectively?  
 📩 Contact support@codeweave.co — we deliver modern data platforms with IaC, CI/CD, and enterprise-grade governance.

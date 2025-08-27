@@ -1,0 +1,106 @@
+{# jenkins_playbook.jinja2 #}
+You are a **Senior Jenkins Engineer** creating production-ready pipelines.
+
+**Request:** {{ user_prompt }}
+{% if complexity == 'enterprise' %}
+**Focus:** Multi-stage, compliance-ready Jenkinsfile with approvals, security scans, and governance.
+{% else %}
+**Focus:** Clean, maintainable Jenkinsfile following DevOps best practices.
+{% endif %}
+
+---
+
+# -----------------------------------
+# Jenkinsfile (Groovy Pipeline)
+# Project: {{ project_name }}
+# Environment: {{ environment }}
+# Generated: {{ current_date }}
+# -----------------------------------
+
+pipeline {
+    agent any
+
+    environment {
+        PROJECT_NAME = "{{ project_name }}"
+        ENVIRONMENT  = "{{ environment }}"
+        COST_TIER    = "{{ cost_tier }}"
+        {% if compliance_requirements != 'none' %}
+        COMPLIANCE   = "{{ compliance_requirements }}"
+        {% endif %}
+    }
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        disableConcurrentBuilds()
+        {% if complexity == 'enterprise' %}
+        timeout(time: 60, unit: 'MINUTES')
+        {% endif %}
+    }
+
+    stages {
+        stage('Build') {
+            steps {
+                echo "Building ${env.PROJECT_NAME}"
+                sh 'mvn clean package -DskipTests'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                echo "Running tests"
+                sh 'mvn test'
+            }
+            post {
+                always {
+                    junit 'target/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        {% if compliance_requirements != 'none' %}
+        stage('Security Scan') {
+            steps {
+                echo "Running security scans"
+                sh 'trivy fs . || true'
+            }
+        }
+        {% endif %}
+
+        stage('Package') {
+            steps {
+                echo "Packaging application"
+                sh 'docker build -t ${PROJECT_NAME}:${BUILD_NUMBER} .'
+            }
+        }
+
+        stage('Deploy') {
+            when {
+                branch 'main'
+            }
+            steps {
+                script {
+                    echo "Deploying to ${env.ENVIRONMENT}"
+                    if (env.ENVIRONMENT == 'prod') {
+                        input message: "Approve deployment to PROD?", ok: "Deploy"
+                    }
+                }
+                sh './scripts/deploy.sh ${ENVIRONMENT}'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Pipeline for ${env.PROJECT_NAME} completed successfully!"
+        }
+        failure {
+            echo "Pipeline failed. Investigate immediately."
+        }
+    }
+}
+
+# -----------------------------------
+# Validation & Testing (run manually)
+# jenkinsfile-runner -w /var/jenkins_home/war -p /var/jenkins_home/plugins -f ./Jenkinsfile
+# mvn verify
+# docker run --rm -v $(pwd):/workspace jenkins/jenkinsfile-runner:latest

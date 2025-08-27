@@ -1,0 +1,253 @@
+{# openshift_playbook.jinja2 #}
+You are a **Principle level OpenShift Engineer** creating production-ready manifests.
+
+**Request:** {{ user_prompt }}
+{% if complexity == 'enterprise' %}
+**Focus:** Multi-environment, compliance-ready with NetworkPolicies, SCCs, Quotas, and governance.
+{% else %}
+**Focus:** Developer-friendly OpenShift resources following Red Hat best practices.
+{% endif %}
+
+---
+
+{% set resource_types = user_prompt.lower() %}
+{% set needs_security = complexity == 'enterprise' %}
+
+# -----------------------------------
+# OpenShift Manifest Collection
+# Environment: {{ environment }}
+# Project: {{ project_name }}
+# Generated: {{ current_date }}
+# -----------------------------------
+
+{% if 'project' in resource_types or needs_security %}
+---
+apiVersion: project.openshift.io/v1
+kind: Project
+metadata:
+  name: {{ project_name }}-{{ environment }}
+  annotations:
+    openshift.io/description: "{{ user_prompt | truncate(100) }}"
+    openshift.io/display-name: "{{ project_name | title }} ({{ environment | upper }})"
+  labels:
+    environment: {{ environment }}
+    managed-by: openshift-playbook
+    {% if compliance_requirements != 'none' %}
+    compliance: {{ compliance_requirements }}
+    {% endif %}
+{% endif %}
+
+{% if 'deployment' in resource_types or 'app' in resource_types %}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ project_name }}
+  namespace: {{ project_name }}-{{ environment }}
+  labels: &labels
+    app: {{ project_name }}
+    environment: {{ environment }}
+    version: v1
+spec:
+  replicas: {% if environment == 'prod' %}3{% else %}2{% endif %}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      <<: *labels
+  template:
+    metadata:
+      labels:
+        <<: *labels
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+    spec:
+      containers:
+      - name: {{ project_name }}
+        image: {% if image_registry %}{{ image_registry }}/{% endif %}{{ project_name }}:{{ image_tag | default('latest') }}
+        imagePullPolicy: {{ image_pull_policy | default("IfNotPresent") }}
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        env:
+        - name: ENVIRONMENT
+          value: {{ environment }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          capabilities:
+            drop: ["ALL"]
+{% endif %}
+
+{% if 'service' in resource_types or 'route' in resource_types %}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ project_name }}
+  namespace: {{ project_name }}-{{ environment }}
+  labels:
+    app: {{ project_name }}
+spec:
+  selector:
+    app: {{ project_name }}
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http
+
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ project_name }}
+  namespace: {{ project_name }}-{{ environment }}
+  labels:
+    app: {{ project_name }}
+spec:
+  host: {{ project_name }}-{{ environment }}.{{ cluster_domain | default('apps.cluster.local') }}
+  to:
+    kind: Service
+    name: {{ project_name }}
+  port:
+    targetPort: http
+  tls:
+    termination: {% if environment == 'prod' %}reencrypt{% else %}edge{% endif %}
+    {% if environment == 'prod' %}
+    insecureEdgeTerminationPolicy: Redirect
+    {% endif %}
+{% endif %}
+
+{% if needs_security or 'network' in resource_types %}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ project_name }}-netpol
+  namespace: {{ project_name }}-{{ environment }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ project_name }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: openshift-ingress
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  - {} # Allow all egress for now - restrict as needed
+{% endif %}
+
+{% if needs_security %}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ project_name }}
+  namespace: {{ project_name }}-{{ environment }}
+  labels:
+    app: {{ project_name }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ project_name }}-role
+  namespace: {{ project_name }}-{{ environment }}
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ project_name }}-binding
+  namespace: {{ project_name }}-{{ environment }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ project_name }}-role
+subjects:
+- kind: ServiceAccount
+  name: {{ project_name }}
+  namespace: {{ project_name }}-{{ environment }}
+
+---
+kind: SecurityContextConstraints
+apiVersion: security.openshift.io/v1
+metadata:
+  name: {{ project_name }}-restricted
+allowHostDirVolumePlugin: false
+allowPrivilegedContainer: false
+runAsUser:
+  type: MustRunAsNonRoot
+seLinuxContext:
+  type: MustRunAs
+users:
+  - system:serviceaccount:{{ project_name }}-{{ environment }}:{{ project_name }}
+
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: {{ project_name }}-quota
+  namespace: {{ project_name }}-{{ environment }}
+spec:
+  hard:
+    pods: "50"
+    requests.cpu: "10"
+    requests.memory: 32Gi
+    limits.cpu: "20"
+    limits.memory: 64Gi
+{% endif %}
+
+# -----------------------------------
+# Validation & Testing (run manually)
+# oc apply -f manifests/ --dry-run=client --validate=true
+# oc apply -f manifests/ -n {{ project_name }}-{{ environment }}
+# oc get all -n {{ project_name }}-{{ environment }}
+# oc rollout status deployment/{{ project_name }} -n {{ project_name }}-{{ environment }}
+# oc port-forward svc/{{ project_name }} 8080:8080 -n {{ project_name }}-{{ environment }}
+# curl http://localhost:8080/health
+# oc adm policy who-can get pods -n {{ project_name }}-{{ environment }}
+# oc get networkpolicy -n {{ project_name }}-{{ environment }}
+# oc top pods -n {{ project_name }}-{{ environment }}
+# oc describe quota -n {{ project_name }}-{{ environment }}
+
+# -----------------------------------
+# OpenShift Gotchas
+# - Routes require Services as backends
+# - SCCs may block certain pod security settings
+# - Image pull policies affect disconnected environments
+# - Resource quotas apply at Project level
+# - BuildConfigs/ImageStreams are often needed for CI/CD

@@ -18,3 +18,10 @@ data_architecture:
 mlops:
 - Build an MLOps platform with feature store, model registry, CI/CD, and automated
   canary releases.
+quick_task:
+- Provision an S3 bucket with versioning enabled.
+- Deploy a pod in Kubernetes with a ConfigMap.
+quick_fix:
+- Terraform state is locked, how do I fix?
+- My Kubernetes pod is stuck in CrashLoopBackOff.
+- GitHub Actions runner keeps running out of memory.

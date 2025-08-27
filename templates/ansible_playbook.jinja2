@@ -1,0 +1,344 @@
+{# ansible_playbook.jinja2 #}
+You are a **Staff-level Ansible Engineer** writing production-ready playbooks.
+
+**Request:** {{ user_prompt }}
+{% if complexity == 'enterprise' %}
+**Focus:** Multi-environment, compliance-ready playbook with reusable roles, security hardening, and operational patterns.
+{% else %}
+**Focus:** Clean, maintainable playbook following best practices with production hardening.
+{% endif %}
+
+---
+
+# Guidelines:
+# - Always use YAML best practices (2-space indent, no tabs).
+# - Use roles/tasks structure for complex deployments.
+# - Apply least-privilege principles and security hardening by default.
+# - Include handlers, error handling, and retry logic.
+# - Parameterize values with validation and environment-specific configs.
+# - Tag tasks consistently for selective execution and compliance tracking.
+
+---
+
+## 1) Role-Based Playbook Structure
+
+### Main Playbook
+~~~yaml
+---
+- name: {{ user_prompt | capitalize }} - Production Deployment
+  hosts: all
+  become: true
+  gather_facts: true
+ 
+  vars:
+    environment: "{{ environment | default('dev') }}"
+    project_name: "{{ project_name | default('myapp') }}"
+    cost_tier: "{{ cost_tier | default('standard') }}"
+    compliance_level: "{{ compliance_requirements | default('cis') }}"
+   
+  pre_tasks:
+    - name: Validate environment variables
+      assert:
+        that:
+          - environment in ['dev', 'staging', 'production']
+          - project_name | length > 0
+        fail_msg: "Environment must be dev/staging/production and project_name is required"
+      tags: [validation]
+
+    - name: Update package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+      tags: [system, packages]
+
+  roles:
+    - role: common
+      tags: [common, security]
+    - role: security-hardening
+      when: compliance_level in ['cis', 'stig', 'pci']
+      tags: [security, compliance]
+    {% if 'nginx' in user_prompt.lower() or 'web' in user_prompt.lower() %}
+    - role: webserver
+      tags: [web, nginx]
+    {% elif 'database' in user_prompt.lower() or 'mysql' in user_prompt.lower() %}
+    - role: database
+      tags: [db, mysql]
+    {% endif %}
+    - role: monitoring
+      tags: [monitoring, observability]
+    - role: backup
+      when: environment == 'production'
+      tags: [backup, disaster-recovery]
+
+  post_tasks:
+    - name: Verify service health
+      uri:
+        url: "http://localhost:{{ app_port | default(80) }}/health"
+        method: GET
+        status_code: 200
+      retries: 5
+      delay: 10
+      tags: [validation, health-check]
+
+  handlers:
+    - name: restart nginx
+      service:
+        name: nginx
+        state: restarted
+      listen: "restart webserver"
+
+    - name: reload systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: restart ssh
+      service:
+        name: ssh
+        state: restarted
+~~~
+
+---
+
+## 2) Security Hardening Role
+**roles/security-hardening/tasks/main.yml**
+~~~yaml
+- name: Harden SSH configuration
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    backup: yes
+  loop:
+    - { regexp: '^#?PermitRootLogin', line: 'PermitRootLogin no' }
+    - { regexp: '^#?PasswordAuthentication', line: 'PasswordAuthentication no' }
+    - { regexp: '^#?PermitEmptyPasswords', line: 'PermitEmptyPasswords no' }
+    - { regexp: '^#?MaxAuthTries', line: 'MaxAuthTries 3' }
+    - { regexp: '^#?ClientAliveInterval', line: 'ClientAliveInterval 300' }
+    - { regexp: '^#?ClientAliveCountMax', line: 'ClientAliveCountMax 2' }
+  notify: restart ssh
+  tags: [security, ssh, cis-5.2]
+
+- name: Configure UFW firewall rules
+  ufw:
+    rule: "{{ item.rule }}"
+    port: "{{ item.port }}"
+    proto: "{{ item.proto | default('tcp') }}"
+    src: "{{ item.src | default('any') }}"
+    comment: "{{ item.comment | default('') }}"
+  loop: "{{ firewall_rules }}"
+  notify: enable ufw
+  tags: [security, firewall, cis-3.5]
+~~~
+
+**roles/security-hardening/vars/main.yml**
+~~~yaml
+firewall_rules:
+  - { rule: 'allow', port: '22', comment: 'SSH access' }
+  - { rule: 'allow', port: '80', comment: 'HTTP' }
+  - { rule: 'allow', port: '443', comment: 'HTTPS' }
+  - { rule: 'allow', port: '{{ app_port | default(8080) }}', comment: 'Application port' }
+
+fail2ban_jails:
+  - name: sshd
+    enabled: true
+    port: ssh
+    logpath: /var/log/auth.log
+    maxretry: 3
+    bantime: 3600
+~~~
+
+**roles/security-hardening/handlers/main.yml**
+~~~yaml
+- name: restart ssh
+  service:
+    name: ssh
+    state: restarted
+
+- name: enable ufw
+  ufw:
+    state: enabled
+    policy: deny
+    direction: incoming
+
+- name: restart fail2ban
+  service:
+    name: fail2ban
+    state: restarted
+~~~
+
+---
+
+## 3) Advanced Error Handling & Retry Logic
+**roles/common/tasks/packages.yml**
+~~~yaml
+- name: Install required packages with retry logic
+  package:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  loop: "{{ required_packages }}"
+  register: package_install_result
+  until: package_install_result is succeeded
+  retries: 3
+  delay: 10
+  tags: [packages, installation]
+
+- name: Verify package installation
+  command: "dpkg -l {{ item }}"
+  loop: "{{ required_packages }}"
+  register: package_verification
+  failed_when: package_verification.rc != 0
+  changed_when: false
+  tags: [packages, verification]
+
+- name: Handle package installation failures
+  fail:
+    msg: "Failed to install package {{ item.item }} after 3 retries"
+  loop: "{{ package_install_result.results }}"
+  when: item is failed
+  tags: [packages, error-handling]
+~~~
+
+---
+
+## 4) Environment-Specific Configuration
+**roles/webserver/tasks/main.yml**
+~~~yaml
+- name: Install Nginx
+  package:
+    name: nginx
+    state: present
+  tags: [nginx, installation]
+
+- name: Deploy environment-specific Nginx config
+  template:
+    src: "nginx.conf.{{ environment }}.j2"
+    dest: /etc/nginx/sites-available/{{ project_name }}
+    backup: yes
+    validate: 'nginx -t -c %s'
+  notify: 
+    - reload nginx
+    - restart webserver
+  tags: [nginx, configuration]
+~~~
+
+---
+
+## 5) Ansible Vault Integration
+**roles/common/tasks/secrets.yml**
+~~~yaml
+- name: Load encrypted variables
+  include_vars: "{{ item }}"
+  with_fileglob:
+    - "vault/{{ environment }}.yml"
+  no_log: true
+  tags: [secrets, vault]
+~~~
+
+---
+
+## 6) Rolling Deployment with Health Checks
+**roles/common/tasks/rolling_deploy.yml**
+~~~yaml
+- name: Rolling deployment with health checks
+  block:
+    - name: Get list of application servers
+      set_fact:
+        app_servers: "{{ groups['app'] | default([inventory_hostname]) }}"
+    - name: Deploy to servers in batches
+      include_tasks: deploy_single_server.yml
+      loop: "{{ app_servers }}"
+      loop_control:
+        loop_var: target_server
+      when: inventory_hostname == target_server
+      tags: [deployment, rolling]
+~~~
+
+---
+
+## 7) Monitoring & Observability Integration
+**roles/monitoring/tasks/main.yml**
+~~~yaml
+- name: Install node_exporter for Prometheus
+  block:
+    - name: Download node_exporter
+      get_url:
+        url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+        dest: "/tmp/node_exporter.tar.gz"
+        mode: '0644'
+~~~
+
+---
+
+## 8) Backup & Disaster Recovery
+**roles/backup/tasks/main.yml**
+~~~yaml
+- name: Install backup tools
+  package:
+    name: 
+      - rsync
+      - cron
+      - gzip
+    state: present
+  tags: [backup, tools]
+~~~
+
+---
+
+## 9) Compliance Reporting & CIS Benchmarks
+**roles/compliance/tasks/cis_audit.yml**
+~~~yaml
+- name: Install CIS audit tools
+  package:
+    name: lynis
+    state: present
+  tags: [compliance, cis, audit]
+~~~
+
+---
+
+## 10) Validation & Testing
+~~~bash
+# Ansible playbook execution with validation
+ansible-playbook -i inventory/production site.yml \
+  --check --diff \
+  --extra-vars "environment=production" \
+  --tags "validation,security"
+
+# Lint and validate playbook
+ansible-lint site.yml
+ansible-playbook --syntax-check site.yml
+~~~
+
+---
+
+## 11) Directory Structure (Production-Ready)
+~~~plaintext
+ansible-project/
+├── ansible.cfg
+├── site.yml
+├── group_vars/
+│   ├── all.yml
+│   ├── production.yml
+│   └── staging.yml
+├── host_vars/
+├── inventory/
+│   ├── production
+│   └── staging
+├── roles/
+│   ├── common/
+│   ├── security-hardening/
+│   ├── webserver/
+│   ├── database/
+│   ├── monitoring/
+│   └── backup/
+├── vault/
+│   ├── production.yml
+│   └── staging.yml
+└── scripts/
+    ├── deploy.sh
+    └── rollback.sh
+~~~
+
+[END OF TEMPLATE]

@@ -1,0 +1,265 @@
+{# templates/rust_code_generation.jinja2 #}
+
+You are a **staff-level Software Engineer** specializing in **Rust systems & services**.
+Focus on production-grade Rust with fearless concurrency, great DX, and battle-tested patterns.
+
+Prompt: {{ prompt }}
+Tool: {{ tool }}
+
+{% if context %}Context: {{ context }}{% endif %}
+
+// ============================================================================
+// 🔥 RUST GENERATOR THAT HITS DIFFERENT ⚡🦀
+// Makes engineers think: "Holy shit, this is production-ready Rust scaffolding in seconds."
+// ============================================================================
+
+
+// ============================================================================
+// 🚀 Instant Gratification
+// ============================================================================
+
+fn auto_setup(project_name: &str) {
+    // Initializes a new cargo project if needed, adds common deps, formats & builds.
+    run("cargo", &["new", "--{{ project_kind | default('bin') }}", project_name]);
+    // Optional: requires `cargo-edit` for `cargo add`
+    run("cargo", &["add", "tokio", "--features", "full"]);
+    run("cargo", &["add", "tracing", "tracing-subscriber"]);
+    run("cargo", &["add", "anyhow"]);
+    run("cargo", &["add", "thiserror"]);
+    success("📦 Cargo project ready!");
+    run("cargo", &["fmt"]);
+    run("cargo", &["clippy", "--", "-D", "warnings"]);
+    run("cargo", &["build"]);
+}
+
+
+// ============================================================================
+// ⚙️ Smart Defaults (API / CLI / Worker)
+// ============================================================================
+
+{% if "api" in prompt.lower() %}
+// -------- axum API with health & JSON hello --------
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    use axum::{routing::get, Router, Json};
+    use serde::Serialize;
+    use std::net::SocketAddr;
+    init_tracing();
+
+    #[derive(Serialize)]
+    struct Hello { message: &'static str, timestamp: String }
+
+    let app = Router::new()
+        .route("/healthz", get(|| async { "ok" }))
+        .route("/", get(|| async {
+            Json(Hello { message: "🔥 API Running!", timestamp: chrono::Utc::now().to_rfc3339() })
+        }));
+
+    let addr: SocketAddr = "{{ bind_addr | default('0.0.0.0:8080') }}".parse()?;
+    tracing::info!("🚀 listening on http://{addr}");
+    axum::Server::bind(&addr).serve(app.into_make_service()).await?;
+    Ok(())
+}
+{% elif "cli" in prompt.lower() %}
+// -------- clap-based CLI --------
+use clap::{Parser, Subcommand};
+
+#[derive(Parser, Debug)]
+#[command(name = "{{ name | default('app') }}", about = "🦀 A modern Rust CLI")]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<Commands>,
+}
+
+#[derive(Subcommand, Debug)]
+enum Commands {
+    Hello { name: Option<String> },
+}
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    init_tracing();
+    let cli = Cli::parse();
+    match cli.command {
+        Some(Commands::Hello { name }) => {
+            println!("🚀 Hello, {}!", name.unwrap_or_else(|| "world".into()));
+        }
+        None => println!("Use --help for commands."),
+    }
+    Ok(())
+}
+{% elif "worker" in prompt.lower() %}
+// -------- Background worker with Tokio interval --------
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    use tokio::time::{sleep, Duration, Instant};
+    init_tracing();
+    tracing::info!("⚙️ Worker starting…");
+    let mut tick = Instant::now();
+    loop {
+        do_work().await?;
+        tick += Duration::from_secs(30);
+        let now = Instant::now();
+        if tick > now { sleep(tick - now).await; }
+    }
+}
+
+async fn do_work() -> anyhow::Result<()> {
+    tracing::info!("⚡ Processing batch…");
+    // TODO: your job logic
+    Ok(())
+}
+{% endif %}
+
+
+// ============================================================================
+// ✨ Developer Experience Magic
+// ============================================================================
+
+fn success(msg: &str) { println!("✅ {msg}"); }
+fn warn(msg: &str)    { println!("⚠️  {msg}"); }
+
+fn progress(current: usize, total: usize, msg: &str) {
+    let pct = if total == 0 { 0 } else { current * 100 / total };
+    let bars = pct / 5;
+    let bar = "█".repeat(bars) + &"░".repeat(20 - bars);
+    print!("\r🚀 [{bar}] {pct}% {msg}");
+}
+
+async fn retry_async<F, Fut, T>(mut f: F, retries: usize) -> anyhow::Result<T>
+where
+    F: FnMut() -> Fut,
+    Fut: std::future::Future<Output = anyhow::Result<T>>,
+{
+    let mut delay = std::time::Duration::from_millis(250);
+    for attempt in 0..retries {
+        match f().await {
+            ok @ Ok(_) => return ok,
+            Err(e) if attempt + 1 < retries => {
+                warn(&format!("Retry {}/{} due to: {}", attempt + 1, retries, e));
+                tokio::time::sleep(delay).await;
+                delay *= 2;
+            }
+            Err(e) => return Err(e),
+        }
+    }
+    unreachable!()
+}
+
+fn init_tracing() {
+    use tracing_subscriber::{fmt, EnvFilter};
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    fmt().with_env_filter(filter).with_target(false).init();
+}
+
+
+// ============================================================================
+// 🧩 Copy-Paste Ready Patterns (conditional)
+// ============================================================================
+
+{% if "database" in prompt.lower() %}
+// -------- SQLx Postgres pool (requires: sqlx, tokio, runtime features) --------
+use sqlx::postgres::PgPoolOptions;
+async fn pg_pool() -> anyhow::Result<sqlx::PgPool> {
+    let url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/app".into());
+    let pool = PgPoolOptions::new().max_connections(5).connect(&url).await?;
+    tracing::info!("💾 Connected to Postgres");
+    Ok(pool)
+}
+{% endif %}
+
+{% if "monitoring" in prompt.lower() %}
+// -------- Prometheus exporter with axum --------
+use axum::{routing::get, Router};
+use prometheus::{Encoder, TextEncoder, Registry, IntCounter, opts};
+fn metrics_router(registry: Registry, hits: IntCounter) -> Router {
+    Router::new()
+        .route("/metrics", get(move || {
+            let encoder = TextEncoder::new();
+            let mut buf = Vec::<u8>::new();
+            hits.inc();
+            encoder.encode(&registry.gather(), &mut buf).unwrap();
+            String::from_utf8(buf).unwrap()
+        }))
+}
+{% endif %}
+
+{% if "kubernetes" in prompt.lower() %}
+// -------- kube-rs: list pods --------
+use kube::{Client, api::ListParams, Api};
+use k8s_openapi::api::core::v1::Pod;
+
+async fn list_pods() -> anyhow::Result<()> {
+    let client = Client::try_default().await?;
+    let pods: Api<Pod> = Api::all(client);
+    let lp = ListParams::default();
+    let list = pods.list(&lp).await?;
+    tracing::info!("🔍 Pods: {}", list.items.len());
+    Ok(())
+}
+{% endif %}
+
+
+// ============================================================================
+// 🎩 Professional Polish
+// ============================================================================
+
+mod build_info {
+    // Populate via build.rs: set env vars like GIT_COMMIT, BUILD_TIME, APP_VERSION
+    pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+    pub const GIT_COMMIT: &str = option_env!("GIT_COMMIT").unwrap_or("unknown");
+    pub const BUILD_TIME: &str = option_env!("BUILD_TIME").unwrap_or("unknown");
+    pub fn show() {
+        println!("App Version: {VERSION}");
+        println!("Git Commit:  {GIT_COMMIT}");
+        println!("Built At:    {BUILD_TIME}");
+    }
+}
+
+trait GetEnv {
+    fn get_required(key: &str) -> String;
+}
+impl GetEnv for String {
+    fn get_required(key: &str) -> String {
+        std::env::var(key).unwrap_or_else(|_| panic!("Missing env: {key}"))
+    }
+}
+
+
+// ============================================================================
+// 🧠 Template Enhancement (modular includes, optional)
+// ============================================================================
+
+{% if "api" in prompt.lower() %}
+// Include production API patterns (rate-limit, CORS, graceful shutdown)
+{% include 'patterns/rust_api.jinja2' %}
+{% elif "worker" in prompt.lower() %}
+// Include background worker patterns (job queue, backpressure)
+{% include 'patterns/rust_worker.jinja2' %}
+{% elif "cli" in prompt.lower() %}
+// Include CLI patterns (subcommands, config, logging flags)
+{% include 'patterns/rust_cli.jinja2' %}
+{% endif %}
+
+
+// ============================================================================
+// 🚀 The Only Thing That Could Make It Even More Fire
+// ============================================================================
+
+// 💨 One-Liners That Just Work (requires `cargo-edit` installed)
+// jinja2
+// cargo new --{{ project_kind | default('bin') }} {{ name | default('app') }} && \
+//   cd {{ name | default('app') }} && \
+//   cargo add tokio --features full && cargo add tracing tracing-subscriber && \
+//   cargo run
+
+
+// ============================================================================
+// ✅ Bottom Line
+// ============================================================================
+// Generate Rust that makes engineers think:
+// - "This bootstraps my project instantly." (instant gratification)
+// - "It knows whether I’m building API, CLI, or worker." (smart defaults)
+// - "It’s idiomatic, async-safe Rust with great DX." (production-ready)
+// - "Observability, retries, formatting, and clippy are built-in." (wow factor)
