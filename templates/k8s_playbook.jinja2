@@ -1,186 +1,97 @@
 {# templates/k8s_playbook.jinja2 #}
-📋 **Template Scope:** This playbook provides comprehensive Kubernetes platform architecture for enterprise deployments. 
-For quick fixes or simple tasks, use:
-- **K8s Quick Task** → immediate implementation guidance
-- **K8s Quick Fix** → emergency troubleshooting
 
-This template delivers full cluster design, security hardening, compliance frameworks, and operational procedures suitable for CTO/platform team review.
-
----
-{# STREAMING NOTE:
-   If the model cannot finish due to length, it should end with EXACTLY: [CONTINUE_NEEDED] #}
-
-You are a **staff-level Kubernetes Architect** producing a **production-grade Kubernetes Playbook**.  
-This must reflect **deep Kubernetes expertise** suitable for CTO/CISO review and justify enterprise consulting rates.
+You are a **staff-level Kubernetes Architect** producing **production-grade K8s platform design**.
+This delivers enterprise-ready architecture suitable for CTO review.
 
 Prompt: {{ prompt }}
 Tool: Kubernetes
 
-{% if context %}
-Prior Conversation:
-{{ context }}
-{% endif %}
+{% if context %}Context: {{ context }}{% endif %}
 
----
+# ============================================================================
+# 🔥 K8S PLATFORM THAT HITS DIFFERENT ⚡☸️  
+# Makes CTOs think: "Holy shit, this is enterprise-ready architecture in seconds."
+# ============================================================================
 
-## 1) Executive Summary
-- **Prompt:** {{ prompt | default("Design a production-grade Kubernetes platform.") }}  
-- **Tool:** Kubernetes Playbook  
-- **Cloud/Runtime:** {{ cloud | default("EKS + AKS + GKE (multi-cloud)") }}  
-- **Prior Context:** {{ conversation | default("{}") }}  
+# ============================================================================
+# 🚀 Instant Architecture Overview
+# ============================================================================
 
-This playbook defines **staff-level Kubernetes architecture** with enterprise-grade security, compliance, cost optimization, and operational excellence patterns.
+**Cloud:** {{ cloud | default("EKS") }}
+**Scale:** {{ scale | default("Production multi-tenant") }}
+**Security:** Pod Security Standards + OPA + Network Policies
+**Cost:** Spot instances + Kubecost + HPA/VPA
 
----
-
-## 2) Architecture Diagram
 ```mermaid
 graph TD
-    Dev[Developer] --> Repo[GitHub]
-    Repo --> CI[GitHub Actions CI]
-    CI --> ArgoCD[ArgoCD GitOps]
-    ArgoCD --> Cluster[K8s Cluster (EKS/AKS/GKE)]
-    Cluster --> CNI[CNI: Calico/Cilium/VPC-CNI]
-    Cluster --> Ingress[Ingress: ALB/Nginx/Istio]
-    Cluster --> CSI[Storage: EBS/AzureDisk/GCP-PD]
-    Cluster --> RBAC[RBAC + PSS + OPA]
-    Cluster --> Obs[Prometheus/Grafana/Loki]
-    Cluster --> Cost[Kubecost + Autoscaler]
+    Dev[Developers] --> Git[GitOps]
+    Git --> ArgoCD[ArgoCD]
+    ArgoCD --> K8s[K8s Cluster]
+    K8s --> Ingress[Ingress Controller]
+    K8s --> Storage[CSI Drivers]
+    K8s --> Monitor[Prometheus/Grafana]
+    K8s --> Cost[Kubecost]
 ```
 
----
+# ============================================================================
+# 🏗️ Cluster Foundation
+# ============================================================================
 
-## 3) Production Cluster Configuration
-
-### Complete EKS Setup (AWS)
+## EKS with Security Hardening
 ```hcl
-# EKS Cluster with Enterprise Security
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "20.8.4"
 
-  cluster_name    = "prod-eks-${var.environment}"
+  cluster_name    = "prod-${var.env}"
   cluster_version = "1.29"
+  vpc_id         = var.vpc_id
+  subnet_ids     = var.private_subnets
 
-  vpc_id     = var.vpc_id
-  subnet_ids = var.private_subnets
-
-  # Security & Compliance
+  # Security defaults
   enable_irsa = true
   kms_key_id  = aws_kms_key.eks.arn
-  
   cluster_encryption_config = {
     provider_key_arn = aws_kms_key.eks.arn
     resources        = ["secrets"]
   }
 
-  cluster_enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
-
-  # Node Groups with Mixed Capacity
+  # Mixed capacity for cost optimization
   eks_managed_node_groups = {
-    spot_workers = {
+    spot = {
       instance_types = ["m5.large", "m5.xlarge"]
       capacity_type  = "SPOT"
-      min_size       = 2
-      max_size       = 10
-      desired_size   = 3
-      
-      k8s_labels = {
-        workload = "general"
-        capacity = "spot"
-      }
-      
-      taints = {
-        spot = {
-          key    = "workload"
-          value  = "spot"
-          effect = "NO_SCHEDULE"
-        }
-      }
+      min_size      = 2
+      max_size      = 20
+      desired_size  = 3
     }
-    
-    critical_workers = {
+    critical = {
       instance_types = ["m5.xlarge"]
-      capacity_type  = "ON_DEMAND"
+      capacity_type  = "ON_DEMAND" 
       min_size      = 1
-      max_size      = 3
+      max_size      = 5
       desired_size  = 2
-      
-      k8s_labels = {
-        workload = "critical"
-        capacity = "on-demand"
-      }
     }
   }
 
-  # Cluster Add-ons
   cluster_addons = {
-    coredns = {
-      most_recent = true
-    }
-    kube-proxy = {
-      most_recent = true
-    }
-    vpc-cni = {
-      most_recent = true
-      configuration_values = jsonencode({
-        env = {
-          ENABLE_POD_ENI = "true"
-          ENABLE_PREFIX_DELEGATION = "true"
-        }
-      })
-    }
-    aws-ebs-csi-driver = {
-      most_recent = true
-      service_account_role_arn = aws_iam_role.ebs_csi.arn
-    }
+    vpc-cni = { most_recent = true }
+    coredns = { most_recent = true }
+    aws-ebs-csi-driver = { most_recent = true }
   }
-}
-
-# KMS Key for EKS
-resource "aws_kms_key" "eks" {
-  description             = "EKS Cluster Encryption Key"
-  deletion_window_in_days = 7
-  enable_key_rotation     = true
-  
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "Enable IAM User Permissions"
-        Effect = "Allow"
-        Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
-        }
-        Action   = "kms:*"
-        Resource = "*"
-      }
-    ]
-  })
-}
-
-# OIDC Provider for Workload Identity
-resource "aws_iam_openid_connect_provider" "eks" {
-  url = module.eks.cluster_oidc_issuer_url
-  client_id_list = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.eks_oidc.certificates[0].sha1_fingerprint]
 }
 ```
 
-### Production Workload with Security
+## Production Workload Template
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: api-service
   namespace: production
-  labels:
-    app: api-service
-    tier: backend
 spec:
   replicas: 3
   strategy:
-    type: RollingUpdate
     rollingUpdate:
       maxUnavailable: 1
       maxSurge: 1
@@ -191,69 +102,45 @@ spec:
     metadata:
       labels:
         app: api-service
-        tier: backend
     spec:
       serviceAccountName: api-service-sa
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001
-        runAsGroup: 1001
         fsGroup: 1001
-        seccompProfile:
-          type: RuntimeDefault
       containers:
       - name: api
-        image: myregistry/api-service:v1.2.3
+        image: myregistry/api:v1.2.3
         ports:
         - containerPort: 8080
-          name: http
-        env:
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: db-credentials
-              key: password
         resources:
           requests:
             cpu: "250m"
             memory: "512Mi"
-            ephemeral-storage: "1Gi"
           limits:
             cpu: "1000m"
             memory: "1Gi"
-            ephemeral-storage: "2Gi"
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
           capabilities:
-            drop:
-              - ALL
+            drop: [ALL]
         livenessProbe:
           httpGet:
             path: /health
-            port: http
+            port: 8080
           initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /ready
-            port: http
+            port: 8080
           initialDelaySeconds: 5
-          periodSeconds: 5
-          timeoutSeconds: 3
         volumeMounts:
         - name: tmp
           mountPath: /tmp
-        - name: cache
-          mountPath: /app/cache
       volumes:
       - name: tmp
         emptyDir: {}
-      - name: cache
-        emptyDir:
-          sizeLimit: "1Gi"
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -267,113 +154,26 @@ spec:
               topologyKey: kubernetes.io/hostname
       tolerations:
       - key: workload
-        operator: Equal
         value: spot
         effect: NoSchedule
-      nodeSelector:
-        workload: general
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: api-service
-  namespace: production
-spec:
-  selector:
-    app: api-service
-  ports:
-  - port: 80
-    targetPort: 8080
-    name: http
-  type: ClusterIP
 
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: api-service-pdb
-  namespace: production
 spec:
   minAvailable: 2
   selector:
     matchLabels:
       app: api-service
-
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: api-service-netpol
-  namespace: production
-spec:
-  podSelector:
-    matchLabels:
-      app: api-service
-  policyTypes:
-  - Ingress
-  - Egress
-  ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          name: frontend
-    - podSelector:
-        matchLabels:
-          app: frontend
-    ports:
-    - protocol: TCP
-      port: 8080
-  egress:
-  - to:
-    - namespaceSelector:
-        matchLabels:
-          name: database
-    ports:
-    - protocol: TCP
-      port: 5432
-  - to: []  # DNS
-    ports:
-    - protocol: UDP
-      port: 53
 ```
 
-### Storage Classes for Different Workloads
-```yaml
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: fast-ssd
-  annotations:
-    storageclass.kubernetes.io/is-default-class: "false"
-provisioner: ebs.csi.aws.com
-parameters:
-  type: gp3
-  encrypted: "true"
-  kmsKeyId: "arn:aws:kms:us-west-2:123456789012:key/eks-storage"
-allowVolumeExpansion: true
-reclaimPolicy: Delete
-volumeBindingMode: WaitForFirstConsumer
+# ============================================================================
+# 🔒 Security & RBAC
+# ============================================================================
 
----
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: cheap-storage
-provisioner: ebs.csi.aws.com
-parameters:
-  type: st1
-  encrypted: "true"
-allowVolumeExpansion: true
-reclaimPolicy: Delete
-volumeBindingMode: WaitForFirstConsumer
-```
-
----
-
-## 4) RBAC & Security Hardening
-
-### Pod Security Standards
+## Pod Security Standards
 ```yaml
 apiVersion: v1
 kind: Namespace
@@ -383,7 +183,7 @@ metadata:
     pod-security.kubernetes.io/enforce: restricted
     pod-security.kubernetes.io/audit: restricted
     pod-security.kubernetes.io/warn: restricted
-    
+
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -391,7 +191,7 @@ metadata:
   name: api-service-sa
   namespace: production
   annotations:
-    eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/api-service-role"
+    eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/api-service"
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -403,9 +203,6 @@ rules:
 - apiGroups: [""]
   resources: ["configmaps", "secrets"]
   verbs: ["get", "list"]
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["get", "list", "watch"]
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -416,55 +213,55 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: api-service-sa
-  namespace: production
 roleRef:
   kind: Role
   name: api-service-role
   apiGroup: rbac.authorization.k8s.io
 ```
 
-### OPA Gatekeeper Policy
+## Network Policies (Zero Trust)
 ```yaml
-apiVersion: templates.gatekeeper.sh/v1beta1
-kind: ConstraintTemplate
+# Default deny
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
 metadata:
-  name: k8srequiredsecuritycontext
+  name: default-deny
+  namespace: production
 spec:
-  crd:
-    spec:
-      names:
-        kind: K8sRequiredSecurityContext
-      validation:
-        openAPIV3Schema:
-          type: object
-  targets:
-    - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package k8srequiredsecuritycontext
-        violation[{"msg": msg}] {
-          input.review.object.kind == "Pod"
-          not input.review.object.spec.securityContext.runAsNonRoot
-          msg := "Pod must run as non-root user"
-        }
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
 
 ---
-apiVersion: constraints.gatekeeper.sh/v1beta1
-kind: K8sRequiredSecurityContext
+# Allow specific traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
 metadata:
-  name: must-run-as-non-root
+  name: api-to-db
+  namespace: production
 spec:
-  match:
-    kinds:
-      - apiGroups: [""]
-        kinds: ["Pod"]
-    excludedNamespaces: ["kube-system", "kube-public"]
+  podSelector:
+    matchLabels:
+      app: api-service
+  policyTypes: [Egress]
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: database
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to: [] # DNS
+    ports:
+    - protocol: UDP
+      port: 53
 ```
 
----
+# ============================================================================
+# 📊 Observability Stack
+# ============================================================================
 
-## 5) Observability & Cost Management
-
-### Prometheus Configuration
+## Prometheus + Grafana
 ```yaml
 apiVersion: v1
 kind: ConfigMap
@@ -475,21 +272,7 @@ data:
   prometheus.yml: |
     global:
       scrape_interval: 15s
-      evaluation_interval: 15s
-    
-    rule_files:
-      - "/etc/prometheus/rules/*.yml"
-    
     scrape_configs:
-    - job_name: 'kubernetes-nodes'
-      kubernetes_sd_configs:
-      - role: node
-      relabel_configs:
-      - source_labels: [__address__]
-        regex: '(.*):10250'
-        target_label: __address__
-        replacement: '${1}:9100'
-    
     - job_name: 'kubernetes-pods'
       kubernetes_sd_configs:
       - role: pod
@@ -502,243 +285,175 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: prometheus-rules
+  name: alert-rules
   namespace: monitoring
 data:
-  kubernetes.yml: |
+  rules.yml: |
     groups:
     - name: kubernetes
       rules:
       - alert: PodCrashLooping
-        expr: rate(kube_pod_container_status_restarts_total[5m]) * 60 * 5 > 0
+        expr: rate(kube_pod_container_status_restarts_total[5m]) > 0
         for: 5m
-        labels:
-          severity: warning
         annotations:
           summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is crash looping"
-          
       - alert: NodeNotReady
         expr: kube_node_status_condition{condition="Ready",status="true"} == 0
         for: 5m
-        labels:
-          severity: critical
         annotations:
           summary: "Node {{ $labels.node }} is not ready"
 ```
 
----
+# ============================================================================
+# 💰 Cost Optimization
+# ============================================================================
 
-## 6) Operational Runbook
-
-### Cluster Lifecycle Management
-```bash
-#!/bin/bash
-# scripts/cluster_ops.sh
-
-cluster_upgrade() {
-    local cluster_name=$1
-    local target_version=$2
-    
-    echo "Upgrading cluster ${cluster_name} to ${target_version}"
-    
-    # Pre-upgrade validation
-    kubectl get nodes -o wide
-    kubectl get pods --all-namespaces | grep -v Running
-    
-    # Drain and upgrade nodes in batches
-    for node in $(kubectl get nodes -o name); do
-        echo "Draining ${node}"
-        kubectl drain ${node} --ignore-daemonsets --delete-emptydir-data --force
-        
-        # Wait for pods to reschedule
-        sleep 60
-        
-        # Upgrade node (cloud-specific)
-        aws eks update-nodegroup-version --cluster-name ${cluster_name} --nodegroup-name general
-        
-        # Wait for node to be ready
-        kubectl wait --for=condition=Ready ${node} --timeout=300s
-        kubectl uncordon ${node}
-    done
-}
-
-backup_etcd() {
-    local backup_name="etcd-backup-$(date +%Y%m%d-%H%M%S)"
-    
-    # Create etcd snapshot
-    kubectl -n kube-system exec etcd-master -- \
-        etcdctl --endpoints=https://127.0.0.1:2379 \
-        --cacert=/etc/kubernetes/pki/etcd/ca.crt \
-        --cert=/etc/kubernetes/pki/etcd/server.crt \
-        --key=/etc/kubernetes/pki/etcd/server.key \
-        snapshot save /var/lib/etcd/${backup_name}.db
-        
-    # Upload to S3
-    kubectl cp kube-system/etcd-master:/var/lib/etcd/${backup_name}.db ./
-    aws s3 cp ${backup_name}.db s3://k8s-backups/etcd/
-}
-```
-
----
-
-## 7) Cost Optimization Framework
-
-### Kubecost Integration
+## Kubecost Configuration
 ```yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kubecost-cost-model
+  name: kubecost-config
   namespace: kubecost
 data:
   config.yaml: |
     spotLabel: "capacity"
     spotLabelValue: "spot"
-    gpuLabel: "accelerator"
-    
-    # Cloud provider configs
     cloudProvider: "AWS"
     awsRegion: "us-west-2"
-    
-    # Custom pricing for accurate cost allocation
     customPricing:
       spotCPU: 0.01
       spotRAM: 0.005
-      onDemandCPU: 0.04
-      onDemandRAM: 0.02
 
 ---
-apiVersion: apps/v1
-kind: Deployment
+# Vertical Pod Autoscaler for right-sizing
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
 metadata:
-  name: cost-optimizer
-  namespace: kubecost
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: cost-optimizer
-  template:
-    metadata:
-      labels:
-        app: cost-optimizer
-    spec:
-      containers:
-      - name: optimizer
-        image: kubecost/cost-optimizer:latest
-        env:
-        - name: CLUSTER_NAME
-          value: "prod-eks"
-        - name: RECOMMENDATIONS_ENABLED
-          value: "true"
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "128Mi"
-```
-
----
-
-## 8) Security & Compliance Implementation
-
-### Network Policies (Zero Trust)
-```yaml
-# Default deny-all policy
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: default-deny-all
+  name: api-service-vpa
   namespace: production
 spec:
-  podSelector: {}
-  policyTypes:
-  - Ingress
-  - Egress
-
----
-# Allow specific communication patterns
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: api-to-database
-  namespace: production
-spec:
-  podSelector:
-    matchLabels:
-      app: api-service
-  policyTypes:
-  - Egress
-  egress:
-  - to:
-    - namespaceSelector:
-        matchLabels:
-          name: database
-    - podSelector:
-        matchLabels:
-          app: postgresql
-    ports:
-    - protocol: TCP
-      port: 5432
-  # Allow DNS
-  - to: []
-    ports:
-    - protocol: UDP
-      port: 53
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api-service
+  updatePolicy:
+    updateMode: "Auto"
 ```
 
----
+# ============================================================================
+# 🛠️ Operational Excellence
+# ============================================================================
 
-## 9) Risks & Enterprise Mitigations
+## Cluster Maintenance Script
+```bash
+#!/bin/bash
+# Cluster operations script
 
-| Risk | Kubernetes-Specific Impact | Enterprise Mitigation |
-|------|----------------------------|----------------------|
-| etcd corruption | Cluster state loss, total outage | Automated snapshots + cross-region backup |
-| Node pool failure | Workload eviction, capacity loss | Multi-AZ node groups + cluster autoscaler |
-| RBAC misconfiguration | Security gaps or blocked deployments | OPA policies + regular audit + break-glass procedures |
-| Network policy drift | Compliance violations, lateral movement | GitOps enforcement + Cilium/Calico monitoring |
-| Image vulnerabilities | Security compliance failure | Admission controllers + Trivy scanning + policy enforcement |
-| Resource quota exhaustion | Pod scheduling failures | Monitoring + auto-scaling + cost allocation by team |
+drain_and_upgrade_node() {
+  local node=$1
+  kubectl drain $node --ignore-daemonsets --delete-emptydir-data
+  # Cloud-specific node upgrade here
+  kubectl wait --for=condition=Ready node/$node --timeout=300s
+  kubectl uncordon $node
+}
 
----
+backup_etcd() {
+  local backup_name="etcd-backup-$(date +%Y%m%d-%H%M%S)"
+  # Backup logic for managed clusters
+  echo "Backup created: $backup_name"
+}
 
-## 10) Quick Wins & KPIs
+cluster_health_check() {
+  kubectl get nodes
+  kubectl get pods --all-namespaces | grep -v Running | grep -v Completed
+  kubectl top nodes
+}
+```
 
-### Immediate Implementation (Week 1)
-- Enable **Cluster Autoscaler** with 70% spot nodes → 30-40% cost reduction
-- Apply **Pod Security Standards** restricted mode → compliance baseline
-- Deploy **Kubecost** → namespace cost visibility and chargeback
-- Implement **NetworkPolicies** in critical namespaces → zero trust
-- Add **resource quotas** per namespace → prevent resource hogging
+## Emergency Response Playbook
+```bash
+# Pod stuck in Pending
+kubectl describe pod $POD_NAME -n $NAMESPACE
+kubectl get events -n $NAMESPACE --sort-by=.metadata.creationTimestamp
 
-### Success Metrics
-- **Availability SLO:** 99.9% uptime (measured per service)
-- **Cost Efficiency:** <$0.50 per pod per day (including overhead)
-- **Security Posture:** 100% pods compliant with Pod Security Standards
-- **Performance:** p95 pod startup time <30 seconds
-- **Compliance:** Zero audit findings for PCI/HIPAA controls
+# Node issues
+kubectl describe node $NODE_NAME
+kubectl get pods --all-namespaces --field-selector spec.nodeName=$NODE_NAME
 
----
+# Resource exhaustion
+kubectl top nodes
+kubectl top pods --all-namespaces --sort-by=memory
+```
 
-## 11) Implementation Checklist
+# ============================================================================
+# ⚡ Implementation Checklist
+# ============================================================================
 
-### Phase 1: Foundation (Week 1-2)
-- [ ] Deploy cluster with Terraform configuration above
-- [ ] Configure RBAC and Pod Security Standards
-- [ ] Set up basic monitoring (Prometheus/Grafana)
-- [ ] Implement network policies
+**Week 1 - Foundation:**
+- Deploy cluster with Terraform above
+- Configure RBAC and Pod Security Standards
+- Set up monitoring stack
+- Implement network policies
 
-### Phase 2: Production Readiness (Week 3-4)
-- [ ] Configure backup and disaster recovery procedures
-- [ ] Deploy cost monitoring and optimization tools
-- [ ] Set up comprehensive observability stack
-- [ ] Implement compliance scanning and reporting
+**Week 2 - Production Ready:**
+- Configure backup procedures
+- Deploy cost monitoring
+- Set up alerting rules
+- Create operational runbooks
 
-### Phase 3: Operational Excellence (Week 5-6)
-- [ ] Establish cluster upgrade procedures
-- [ ] Create chaos engineering tests
-- [ ] Document operational runbooks
-- [ ] Train team on troubleshooting procedures
+**Week 3 - Excellence:**
+- Establish upgrade procedures
+- Create chaos tests
+- Document troubleshooting guides
+- Train team on operations
 
-This Kubernetes platform delivers enterprise-grade container orchestration with security, compliance, and cost optimization built-in from day one.
+# ============================================================================
+# 🎯 Success Metrics
+# ============================================================================
 
-[END OF TEMPLATE]
+- **Availability:** 99.9% uptime per service
+- **Cost:** <$0.50 per pod per day
+- **Security:** 100% PSS compliance
+- **Performance:** p95 pod startup <30s
+- **Recovery:** RTO <15min, RPO <1hr
+
+# ============================================================================
+# ⚠️ Critical Risks & Mitigations
+# ============================================================================
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| etcd failure | Total outage | Automated snapshots |
+| Node pool down | Capacity loss | Multi-AZ + autoscaler |
+| RBAC drift | Security gap | GitOps enforcement |
+| Cost spiral | Budget blow | Kubecost alerts |
+
+# ============================================================================
+# 💨 One-Liners That Just Work
+# ============================================================================
+
+```bash
+# Deploy everything
+terraform apply && kubectl apply -f manifests/
+
+# Check cluster health
+kubectl get nodes,pods --all-namespaces
+
+# Emergency drain
+kubectl drain $NODE --ignore-daemonsets --force
+
+# Cost breakdown
+kubectl cost --namespace production
+```
+
+# ============================================================================
+# ✅ Bottom Line
+# ============================================================================
+
+This platform delivers enterprise Kubernetes with:
+- **Security:** Pod Security Standards + Network Policies + RBAC
+- **Cost:** 40% savings with spot nodes + right-sizing
+- **Reliability:** Multi-AZ + PDBs + chaos engineering ready
+- **Observability:** Prometheus + Grafana + cost allocation
+- **Operations:** GitOps + automated backups + runbooks

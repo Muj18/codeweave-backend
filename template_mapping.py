@@ -17,8 +17,8 @@ TEMPLATE_MAP = {
     # Infrastructure as Code & Automation
     # -------------------------
     "terraform": "terraform_playbook.jinja2",
-    "aws cloudformation": "cloudformation_snippet.jinja2",
-    "pulumi": "pulumi_snippet.jinja2",
+    "aws cloudformation": "cloudformation_playbook.jinja2",
+    "pulumi": "pulumi_playbook.jinja2",
     "ansible": "ansible_playbook.jinja2",
     "others (iac / automation)": "other_iac_playbook.jinja2",
 
@@ -33,8 +33,8 @@ TEMPLATE_MAP = {
     "kubernetes": "k8s_playbook.jinja2",
     "docker": "dockerfile_best_practices.jinja2",
     "helm": "helm_chart_helper.jinja2",
-    "istio": "istio_policy_helper.jinja2",
-    "openshift": "openshift_admin_helper.jinja2",
+    "istio": "istio_playbook.jinja2",
+    "openshift": "openshift_playbook.jinja2",
     "others (containers)": "other_universal_playbook.jinja2",
 
     # K8s Quick Task + Fix
@@ -42,18 +42,18 @@ TEMPLATE_MAP = {
     "k8s_quick_fix": "k8s_quick_fix.jinja2",
 
     # -------------------------
-    # Code & Scripts
+    # Code & Scripts (dedicated fire templates you have)
     # -------------------------
-    "bash": "code_generation.jinja2",
-    "python": "code_generation.jinja2",
-    "go": "code_generation.jinja2",
-    "javascript": "code_generation.jinja2",
-    "java": "code_generation.jinja2",
-    "c#": "code_generation.jinja2",
-    "rust": "code_generation.jinja2",
-    "powershell": "code_generation.jinja2",
-    "shell script": "code_generation.jinja2",
-    "other (script/code)": "other_code_playbook.jinja2",
+    "bash": "shell_code_generation.jinja2",
+    "shell script": "shell_code_generation.jinja2",
+    "python": "python_code_generation.jinja2",
+    "go": "go_code_generation.jinja2",
+    "javascript": "javascript_code_generation.jinja2",
+    "java": "java_code_generation.jinja2",
+    "c#": "csharp_code_generation.jinja2",
+    "rust": "rust_code_generation.jinja2",
+    "powershell": "powershell_code_generation.jinja2",
+    "other (script/code)": "other_code_generation.jinja2",
 
     # -------------------------
     # AI & GenAI
@@ -97,10 +97,10 @@ TEMPLATE_MAP = {
     # CI/CD & Platform Automation
     # -------------------------
     "github actions": "gha_workflow.jinja2",
-    "gitlab ci/cd": "gitlab_ci_pipeline.jinja2",
+    "gitlab ci/cd": "gitlab_ci_playbook.jinja2",
     "azure devops": "azure_devops_pipeline.jinja2",
     "argocd": "argocd_appset_helper.jinja2",
-    "jenkins": "jenkinsfile_helper.jinja2",
+    "jenkins": "jenkins_playbook.jinja2",
     "observability": "observability_runbook.jinja2",
     "security & compliance": "security_compliance_playbook.jinja2",
     "cost optimization": "cost_quick_wins.jinja2",
