@@ -71,11 +71,21 @@ class PromptRequest(BaseModel):
     mode: Optional[str] = None
     capabilities: Optional[List[str]] = None  # NEW
 
+# --- Updated model limits ---
 MODEL_LIMITS = {
-    "gpt-3.5-turbo": 4096,
-    "gpt-4o": 4096,
-    "gpt-4o-mini": 4096,
+    "gpt-5-nano": 128_000,
+    "gpt-5-mini": 128_000,
+    "gpt-5": 128_000,
 }
+
+# --- Plan → model mapping ---
+def choose_model_from_plan(plan: str | None) -> str:
+    p = (plan or "free").strip().lower()
+    if p == "free":
+        return "gpt-5-nano"
+    if p in {"pro", "teams"}:
+        return "gpt-5-mini"
+    return "gpt-5"  # enterprise / fallback
 
 def _rough_token_count(text: str) -> int:
     words = max(1, len(text.split()))
@@ -95,7 +105,7 @@ except Exception:
         return _rough_token_count(text)
 
 def safe_max_tokens(model_name: str, prompt_text: str, desired_cap: int, buffer: int = 200) -> int:
-    limit = MODEL_LIMITS.get(model_name, 4096)
+    limit = MODEL_LIMITS.get(model_name, 128_000)
     prompt_tokens = count_tokens(model_name, prompt_text)
     remaining = max(256, limit - prompt_tokens - buffer)
     return max(256, min(desired_cap, remaining))
@@ -167,7 +177,7 @@ async def stream_paged_completion(model: str, system_guard: str, initial_user_co
             stream=True,
             stop=HARD_STOP_TOKENS,
         )
-
+        
         page_buf = ""
         async for chunk in stream:
             content = chunk.choices[0].delta.content or ""
@@ -248,14 +258,18 @@ async def generate_code(req: PromptRequest):
             mode=req.mode or "summary",
         )
 
-    # Select model & token budget
-    if (req.plan or "free").lower() == "free":
-        model = "gpt-3.5-turbo"
-        desired_cap = 4000
-    else:
-        model = "gpt-4o"
-        prompt_tokens = count_tokens(model, rendered_prompt)
-        desired_cap = max(6000, safe_max_tokens(model, rendered_prompt, desired_cap=20000, buffer=500))
+    # --- Select model & token budget (updated for GPT-5 family) ---
+    model = choose_model_from_plan(req.plan)
+
+    if model == "gpt-5-nano":
+        desired_cap = 1_200   # small cap for free users
+    elif model == "gpt-5-mini":
+        desired_cap = 6_000   # generous engineer cap
+    else:  # gpt-5
+        desired_cap = 20_000  # enterprise cap
+
+    prompt_tokens = count_tokens(model, rendered_prompt)
+    desired_cap = safe_max_tokens(model, rendered_prompt, desired_cap=desired_cap, buffer=800)
 
     async def token_stream():
         try:

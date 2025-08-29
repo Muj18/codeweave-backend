@@ -36,7 +36,7 @@ Optional: Redis (caching), API Gateway, Bedrock/Vertex connectors, CI/CD hooks.
 ---
 
 # 3) 🛠️ Tech Stack
-- **LLMs:** GPT-4o, Claude 3.5, Mistral 8x7B, LLaMA 3 (when to use each).  
+- **LLMs:** GPT-5 (enterprise), GPT-5-mini (Pro/Teams), Claude 3.5, Mistral 8x7B, LLaMA 3 (when to use each). 
 - **Retrieval:** LangChain, LlamaIndex, Haystack.  
 - **Vector DB:** FAISS (local), Pinecone/Qdrant/Weaviate (scale).  
 - **Infra:** Docker, Kubernetes, Terraform, Bedrock/Vertex/SageMaker.  
@@ -88,7 +88,7 @@ app = FastAPI()
 @app.post("/chat")
 async def chat(prompt: str):
     response = openai.ChatCompletion.create(
-        model="gpt-4o",
+        model="gpt-5-mini",
         messages=[{"role": "user", "content": prompt}],
         stream=True
     )
@@ -120,7 +120,7 @@ async def track_tokens(request, call_next):
 ---
 
 # 9) 🎥 Multimodal Extensions
-- **Vision:** GPT-4V, CLIP for image QA/logs/screenshots.  
+- **Vision:** GPT-5 with vision, CLIP for image QA/logs/screenshots.  
 - **Audio:** Whisper (speech-to-text), ElevenLabs (TTS).  
 - **Video:** summarisation, highlight reels, incident playback.  
 - **OCR:** document parsing into RAG pipelines.  
